@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Every evening at 18:00 (or on waking, if the Mac was asleep then), Claude
+  summarises the day into the Obsidian daily note; see obsidian-journal.
+  Installed only when chezmoi was given a vault. Loaded by
+  run_onchange_after_30-launch-agents.sh.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>local.obsidian-journal</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>{{ .chezmoi.homeDir }}/.local/bin/obsidian-journal</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>CLAUDE_CONFIG_DIR</key>
+    <string>{{ .chezmoi.homeDir }}/.config/claude</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>18</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>{{ .chezmoi.homeDir }}/Library/Logs/obsidian-journal.log</string>
+  <key>StandardErrorPath</key>
+  <string>{{ .chezmoi.homeDir }}/Library/Logs/obsidian-journal.log</string>
+</dict>
+</plist>

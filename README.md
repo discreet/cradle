@@ -42,7 +42,7 @@ Claude Code.
 
 After the first setup, changes are made by asking Claude Code, from any
 folder: "add jq", "update everything", "change the tmux status bar". A global
-instruction (`dot_config/claude/CLAUDE.md`) sends it to this repo, and
+instruction (`dot_config/claude/CLAUDE.md.tmpl`) sends it to this repo, and
 [CLAUDE.md](CLAUDE.md) tells it how to work here: where each kind of change
 goes, the decisions already made, how to test without touching the machine,
 and the update routine.
@@ -122,6 +122,8 @@ Alternatives considered and not set up, in case they're wanted later:
 | Path | What it configures |
 |---|---|
 | `CLAUDE.md`, `.claude/settings.json` | How Claude Code maintains this repo, and which commands it may run here without asking. Not copied to `~` |
+| `obsidian/` | Obsidian's Daily notes and Templates settings and the daily note template, applied to the vault by `run_onchange_after_35-obsidian.sh.tmpl`. Not copied to `~` |
+| `dot_config/claude/skills/journal/`, `dot_local/bin/executable_journal-data`, `dot_local/bin/executable_obsidian-journal`, `dot_local/bin/executable_journal-slack-check.tmpl`, `private_Library/LaunchAgents/local.obsidian-journal.plist.tmpl` | The Obsidian journal (see Obsidian); installed only when a vault is set |
 | `.githooks/commit-msg` | Rejects commit messages that aren't Conventional Commits. `bootstrap.sh` turns it on with `git config core.hooksPath .githooks` |
 | `scripts/check` | Renders every file into a throwaway home folder and checks it with the program that reads it (shellcheck, tmux, git, ssh, plutil, jq, Neovim, Ghostty, Homebrew). Run before every apply |
 | `.chezmoi.toml.tmpl` | The questions chezmoi asks once per machine (name, email, signing key) and where the repo was cloned |
@@ -138,7 +140,7 @@ Alternatives considered and not set up, in case they're wanted later:
 | `dot_local/bin/executable_tmux-pick` | `~/.local/bin/tmux-pick`: lists tmux sessions, most recent first, to attach to or start a new one; starts one straight away if there are none. Esc or leaving tmux drops to a plain shell |
 | `dot_config/claude/`, `.chezmoitemplates/claude-settings.json` | Claude Code (see below) |
 | `.chezmoiexternal.toml` | Files downloaded from other repos, pinned to a commit (Claude Code skills) |
-| `private_Library/LaunchAgents/` | At login: starts Colima (Docker), loads SSH keys from the keychain into ssh-agent (git signs commits through it) and makes Caps Lock a Control key |
+| `private_Library/LaunchAgents/` | At login: starts Colima (Docker), loads SSH keys from the keychain into ssh-agent (git signs commits through it) and makes Caps Lock a Control key. Every evening: the Obsidian journal |
 | `run_onchange_*` | Re-run `brew bundle`, `mise install` and completion generation when their inputs change, reload the LaunchAgents, and turn off macOS's `⌃Space` shortcut |
 
 ## Claude Code
@@ -158,6 +160,41 @@ the only way it's used here. Sign in once per machine with `claude auth login`.
 | Skills from GitHub | Add an entry to `.chezmoiexternal.toml`, pinned to a commit, with a link to the skill's history so updates can be checked by hand. Your own skills go in `dot_config/claude/skills/<name>/SKILL.md`. |
 | MCP servers (user scope) | Claude Code stores these in its own state file, so add a `run_onchange_` script that runs `claude mcp add-json --scope user ...`. |
 | Not managed | `.claude.json` (sign-in, per-project state), history, sessions, the plugin cache, and anything synced from your claude.ai account (connectors, synced skills). |
+
+## Obsidian
+
+If chezmoi is given an Obsidian vault folder, Claude Code works with it
+directly as files, with no plugin or MCP server:
+
+- The vault is an extra working folder in every session, so Claude can read,
+  search and write notes from any project. Folders you name as private are
+  blocked for Claude's file tools, and the global instructions forbid reading
+  them any other way. Neither the vault path nor the folder names are in this
+  repo; chezmoi asks for them on each machine.
+- Daily notes are configured from `obsidian/` in this repo: they live in
+  `Daily/` as `YYYY-MM-DD.md` and start from `Templates/Daily.md` (a `date`
+  property, `## Notes` and `## Terminal`). A `run_onchange` script merges the
+  settings into the vault's `.obsidian/` files, keeping anything else set in
+  Obsidian, and writes the template; edit them here, not in Obsidian, since
+  the next apply overwrites the template. Obsidian picks up the settings when
+  it next opens the vault.
+- `/journal [YYYY-MM-DD]` writes that day's daily note sections: `## Terminal`
+  (what you did in each Claude Code session, grouped by project, and your
+  commits) and `## Slack` (conversations you took part in, were mentioned in
+  or were sent as DMs, leading with what's waiting on you). It creates the
+  note from the template if needed, and only ever replaces its own sections.
+  Slack comes from the claude.ai Slack connector, connected in your claude.ai
+  account rather than this repo.
+- A LaunchAgent runs it every evening at 18:00 (on waking, if the Mac was
+  asleep), only if there were sessions or commits that day. Log:
+  `~/Library/Logs/obsidian-journal.log`. That run is headless, and headless
+  Claude Code doesn't load claude.ai connectors, so it can't reach Slack.
+  Instead, a `SessionStart` hook (`journal-slack-check`) checks the last
+  weekday's note when you start Claude; if its `## Slack` section is empty,
+  Claude offers once to fill it.
+- `journal-data [YYYY-MM-DD]` prints what the summary is built from: your
+  prompts and Claude's replies (shortened) and your commits in git repos up to
+  four folders below home. Shell history is not used.
 
 ## What changed from the old setup
 

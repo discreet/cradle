@@ -32,7 +32,7 @@ have() { command -v "$1" >/dev/null; }
 
 # Rendered three times: work on github.com beside personal, under two orgs
 # (most checks use this one); work on its own host; and no work identity.
-setup() { # setup <name> <work email> <work host> <work orgs>
+setup() { # setup <name> <work email> <work host> <work orgs> [vault] [private folders]
   mkdir -p "$tmp/$1"
   cat >"$tmp/$1.toml" <<EOF
 sourceDir = "$repo"
@@ -42,9 +42,12 @@ sourceDir = "$repo"
   workEmail = "$2"
   workHost = "$3"
   workOrgs = "$4"
+  obsidianVault = "${5:-}"
+  obsidianPrivate = "${6:-}"
 EOF
 }
-setup home work@example.com github.com "Example-Org other-org"
+vault=$tmp/vault
+setup home work@example.com github.com "Example-Org other-org" "$vault" "Team Stuff; Private/HR/"
 setup home-selfhosted work@example.com git.example.com ""
 setup home-personal "" "" ""
 home2=$tmp/home-personal
@@ -109,6 +112,90 @@ claude_merge() { # managed Claude settings merge over a live file and keep its k
   out=$(HOME=$tmp/merge chezmoi --config "$tmp/home.toml" --persistent-state "$tmp/merge.boltdb" cat "$live") || return 1
   jq -e '.model == "opus" and .theme == "auto" and .permissions.allow == ["Bash(ls *)"]
     and (.permissions.ask | length > 0)' <<<"$out" >/dev/null || { echo "$out"; return 1; }
+}
+obsidian_settings() {
+  jq -e --arg v "$vault" '.permissions.additionalDirectories == [$v]
+    and (.permissions.deny | index("Read(/\($v)/Team Stuff/**)") != null)
+    and (.permissions.deny | index("Edit(/\($v)/Private/HR/**)") != null)' \
+    "$home/.config/claude/settings.json" >/dev/null ||
+    { jq .permissions "$home/.config/claude/settings.json"; return 1; }
+}
+obsidian_instructions() {
+  local f=$home/.config/claude/CLAUDE.md
+  local want
+  for want in "\`$vault\`" "- \`Team Stuff\`" "- \`Private/HR\`"; do
+    grep -qF -- "$want" "$f" || { echo "missing: $want"; cat "$f"; return 1; }
+  done
+}
+no_obsidian() {
+  local h=$tmp/home-personal f bad=0
+  for f in .config/claude/skills/journal .local/bin/journal-data .local/bin/obsidian-journal \
+    .local/bin/journal-slack-check \
+    Library/LaunchAgents/local.obsidian-journal.plist; do
+    [[ ! -e $h/$f ]] || { echo "installed without a vault: $f"; bad=1; }
+  done
+  ! grep -q Obsidian "$h/.config/claude/CLAUDE.md" || { echo "CLAUDE.md mentions Obsidian"; bad=1; }
+  jq -e '.permissions.additionalDirectories == null and .hooks == null' \
+    "$h/.config/claude/settings.json" >/dev/null || { echo "settings add a vault or hooks"; bad=1; }
+  return "$bad"
+}
+obsidian_apply() { # merges into existing settings, writes the template; nothing without a vault
+  mkdir -p "$vault/.obsidian"
+  echo '{"autorun":true,"folder":"Old"}' >"$vault/.obsidian/daily-notes.json"
+  cz execute-template <"$repo/run_onchange_after_35-obsidian.sh.tmpl" | bash >/dev/null || return 1
+  jq -e '. == {"autorun":true,"folder":"Daily","format":"YYYY-MM-DD","template":"Templates/Daily"}' \
+    "$vault/.obsidian/daily-notes.json" >/dev/null || { cat "$vault/.obsidian/daily-notes.json"; return 1; }
+  jq -e '.folder == "Templates"' "$vault/.obsidian/templates.json" >/dev/null || return 1
+  cmp "$repo/obsidian/Templates/Daily.md" "$vault/Templates/Daily.md" || return 1
+  [[ -d $vault/Daily ]] || { echo "no Daily folder"; return 1; }
+  [[ -z $(czh home-personal execute-template <"$repo/run_onchange_after_35-obsidian.sh.tmpl" | tr -d '[:space:]') ]] ||
+    { echo "the script isn't empty without a vault"; return 1; }
+}
+slack_check() { # asks once when the last weekday's Slack section is empty, else stays quiet
+  local hook=$home/.local/bin/journal-slack-check st=$tmp/slack-state day note out
+  day=$(date -v-1d +%F)
+  while (($(date -j -f %F "$day" +%u) > 5)); do day=$(date -j -v-1d -f %F "$day" +%F); done
+  mkdir -p "$vault/.obsidian" "$vault/Daily"
+  echo '{"folder":"Daily"}' >"$vault/.obsidian/daily-notes.json"
+  note=$vault/Daily/$day.md
+  printf '## Terminal\n- did things\n\n## Slack\n\n' >"$note"
+  run() { echo "{\"cwd\":\"$1\"}" | XDG_STATE_HOME=$st "$hook"; }
+  out=$(run /somewhere) || return 1
+  jq -e --arg d "$day" '.hookSpecificOutput.additionalContext | contains($d)' <<<"$out" >/dev/null ||
+    { echo "no offer for an empty Slack section: $out"; return 1; }
+  [[ -z $(run /somewhere) ]] || { echo "asked twice"; return 1; }
+  rm -rf "$st"
+  [[ -z $(run "$st/cradle/journal") ]] || { echo "asked in the evening run"; return 1; }
+  printf '## Terminal\n\n## Slack\n- #team: agreed on X\n' >"$note"
+  [[ -z $(run /somewhere) ]] || { echo "asked although Slack is filled in"; return 1; }
+}
+journal_data() { # sessions and commits from today only, without the evening run's own
+  local j=$tmp/journal today now yesterday out
+  today=$(date +%F)
+  now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  yesterday=$(date -u -v-1d +%Y-%m-%dT%H:%M:%SZ)
+  mkdir -p "$j/claude/projects/p" "$j/home/code/app"
+  {
+    echo "{\"type\":\"user\",\"timestamp\":\"$now\",\"cwd\":\"$j/home/code/app\",\"message\":{\"content\":\"add a login page\"}}"
+    echo "{\"type\":\"assistant\",\"timestamp\":\"$now\",\"cwd\":\"$j/home/code/app\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"Added the login page.\"}]}}"
+    echo "{\"type\":\"user\",\"timestamp\":\"$yesterday\",\"cwd\":\"$j/home/code/app\",\"message\":{\"content\":\"from yesterday\"}}"
+    echo "{\"type\":\"user\",\"timestamp\":\"$now\",\"cwd\":\"$j/home/code/app\",\"message\":{\"content\":\"<system-reminder>noise\"}}"
+  } >"$j/claude/projects/p/a.jsonl"
+  echo "{\"type\":\"user\",\"timestamp\":\"$now\",\"cwd\":\"$j/home/.local/state/cradle/journal\",\"message\":{\"content\":\"the evening run\"}}" \
+    >"$j/claude/projects/p/b.jsonl"
+  git -C "$j/home/code/app" init -q
+  git -C "$j/home/code/app" -c user.email=me@example.com -c user.name=Me -c commit.gpgsign=false \
+    commit -q --allow-empty -m "feat: login page"
+  git -C "$j/home/code/app" config user.email me@example.com
+  out=$(HOME=$j/home CLAUDE_CONFIG_DIR=$j/claude XDG_STATE_HOME=$j/home/.local/state \
+    "$home/.local/bin/journal-data" "$today") || return 1
+  if ! grep -q '^user: add a login page$' <<<"$out" ||
+    ! grep -q '^claude: Added the login page.$' <<<"$out" ||
+    ! grep -q ' feat: login page$' <<<"$out" ||
+    grep -qe 'from yesterday' -e 'noise' -e 'evening run' <<<"$out"; then
+    echo "$out"
+    return 1
+  fi
 }
 ssh_host() { # ssh_host <ssh config> <alias> <expected hostname>
   local got
@@ -175,7 +262,7 @@ if [[ $failed == 1 ]]; then
   exit 1
 fi
 check "chezmoi init questions render" cz_new execute-template --init \
-  --promptString "Full name=Check,Personal git email (your GitHub noreply address keeps it private)=personal@example.com,Work git email (leave blank if this machine has no work identity)=work@example.com,Work git host such as gitlab.com or git.example.com=gitlab.com,Work orgs or groups exactly as in repo URLs (space-separated; blank if every repo on that host is work)=" \
+  --promptString "Full name=Check,Personal git email (your GitHub noreply address keeps it private)=personal@example.com,Work git email (leave blank if this machine has no work identity)=work@example.com,Work git host such as gitlab.com or git.example.com=gitlab.com,Work orgs or groups exactly as in repo URLs (space-separated; blank if every repo on that host is work)=,Obsidian vault folder for Claude (leave blank for none)=~/Notes,Vault folders Claude must not read (separated by semicolons; blank for none)=HR" \
   <.chezmoi.toml.tmpl
 refuses() { # refuses <expected message> <command...>: fails, saying that
   local out
@@ -192,8 +279,8 @@ check "mise config is valid TOML" toml "$home/.config/mise/config.toml"
 for f in bootstrap.sh scripts/check .githooks/commit-msg run_*; do
   check "shellcheck $f" sc_script "$f"
 done
-check "shellcheck bash startup files" sc "$home/.bash_profile" "$home/.bashrc" \
-  "$home"/.config/bash/rc.d/*.bash "$home/.local/bin/tmux-pick"
+check "shellcheck bash startup files and ~/.local/bin" sc "$home/.bash_profile" "$home/.bashrc" \
+  "$home"/.config/bash/rc.d/*.bash "$home"/.local/bin/*
 check "readline loads inputrc" inputrc "$home/.config/readline/inputrc"
 
 if have tmux; then
@@ -250,7 +337,13 @@ for f in "$home"/Library/LaunchAgents/*.plist; do
   check "plist ${f##*/}" plutil -lint "$f"
 done
 check "Claude settings merge over a live file" claude_merge
-check "JSON settings parse" jq empty "$home/.config/claude/settings.json" \
+check "Obsidian: vault access, private folders blocked" obsidian_settings
+check "Obsidian: global instructions name the vault and private folders" obsidian_instructions
+check "Obsidian: nothing installed without a vault" no_obsidian
+check "Obsidian: Daily notes settings and template applied to the vault" obsidian_apply
+check "Obsidian: journal-data finds the day's sessions and commits" journal_data
+check "Obsidian: sessions offer once to add a missing Slack summary" slack_check
+check "JSON settings parse" jq empty "$repo"/obsidian/*.json "$home/.config/claude/settings.json" \
   "$home/.docker/config.json" "$repo/.claude/settings.json"
 
 if have nvim; then

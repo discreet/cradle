@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Claude Code SessionStart hook: if the last weekday's Obsidian daily note has
+# no Slack summary, asks Claude to offer to add one. Headless runs (like the
+# evening journal) can't use the Slack connector, so this happens in the next
+# interactive session. Asks once per day; the evening run is left alone.
+set -euo pipefail
+
+vault={{ .obsidianVault | quote }}
+state="${XDG_STATE_HOME:-$HOME/.local/state}/cradle/journal"
+[[ $(jq -r '.cwd // empty' 2>/dev/null) != "$state" ]] || exit 0
+
+day=$(date -v-1d +%F)
+while (($(date -j -f %F "$day" +%u) > 5)); do
+  day=$(date -j -v-1d -f %F "$day" +%F)
+done
+asked="$state/slack-asked-$day"
+[[ ! -e $asked ]] || exit 0
+
+folder=$(jq -r '.folder // ""' "$vault/.obsidian/daily-notes.json" 2>/dev/null || true)
+note="$vault/${folder:+$folder/}$day.md"
+# The section's lines up to the next heading, without blank ones.
+if [[ -f $note ]] &&
+  awk '/^## Slack[[:space:]]*$/ { s = 1; next } /^## / { s = 0 } s && NF' "$note" | grep -q .; then
+  exit 0
+fi
+
+mkdir -p "$state"
+touch "$asked"
+jq -n --arg day "$day" '{hookSpecificOutput: {hookEventName: "SessionStart",
+  additionalContext: "The Obsidian daily note for \($day) has no Slack summary yet (the evening journal run cannot reach Slack). In your first reply, briefly offer once to add it with the journal skill for \($day); only run it if the user agrees."}}'
