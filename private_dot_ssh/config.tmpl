@@ -1,0 +1,28 @@
+# Managed by chezmoi. Put hosts for this machine in ~/.ssh/config.local.
+Include ~/.ssh/config.local
+{{- if .workEmail }}
+
+# The work account. git sends work repos here (see git's config); offering
+# only the work key makes the host see the work account, even when it's the
+# same host as personal repos.
+Host git-work
+  HostName {{ .workHost }}
+  IdentityFile ~/.ssh/id_ed25519_work
+  IdentitiesOnly yes
+
+# IdentitiesOnly: without it, ssh offers keys already in the agent first, so
+# a loaded work key would sign in to personal GitHub as the work account.
+Host * !git-work
+  IdentityFile ~/.ssh/id_ed25519
+  IdentitiesOnly yes
+{{- end }}
+
+Host *
+  AddKeysToAgent yes
+  UseKeychain yes
+{{- if not .workEmail }}
+  IdentityFile ~/.ssh/id_ed25519
+{{- end }}
+  # New hosts are still added to the first file; the second holds GitHub's
+  # published keys.
+  UserKnownHostsFile ~/.ssh/known_hosts ~/.ssh/known_hosts.github

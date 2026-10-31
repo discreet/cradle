@@ -1,0 +1,10 @@
+# Managed by chezmoi. Put machine-specific settings in ~/.bashrc.local.
+[[ $- == *i* ]] || return
+
+# Drop-ins load in name order, so the numeric prefixes matter.
+for rc in "${XDG_CONFIG_HOME:-$HOME/.config}"/bash/rc.d/*.bash; do
+  [[ -r $rc ]] && source "$rc"
+done
+unset rc
+
+[[ -r ~/.bashrc.local ]] && source ~/.bashrc.local

@@ -1,0 +1,30 @@
+#!/bin/bash
+# Ghostty's first window (initial-command): attach to a tmux session or start
+# one. With no sessions it starts one; otherwise it lists them, most recent
+# first, with an entry for a new session. Esc, or leaving tmux, drops to a
+# plain shell instead of closing the window.
+
+# tmux bans ':' in session names, so it ends the name in each list entry.
+# Ghostty starts this with launchd's minimal PATH; the shims find tmux and fzf.
+PATH="${MISE_DATA_DIR:-$HOME/.local/share/mise}/shims:$PATH"
+new="+ new session"
+
+if [[ -z ${TMUX:-} ]]; then
+  sessions=$(tmux list-sessions -F '#{session_last_attached} #S: #{session_windows} windows#{?session_attached, (attached),}' 2>/dev/null |
+    sort -rn | cut -d' ' -f2-)
+  if [[ -z $sessions ]]; then
+    tmux new-session
+  else
+    choice=$(printf '%s\n%s\n' "$sessions" "$new" |
+      fzf --reverse --no-sort --prompt='tmux> ' \
+        --header='Enter: attach  Esc: plain shell' | cut -d: -f1)
+    if [[ $choice == "$new" ]]; then
+      read -rp "Session name (blank for a number): " name
+      tmux new-session ${name:+-s "$name"}
+    elif [[ -n $choice ]]; then
+      tmux attach-session -t "=$choice"
+    fi
+  fi
+fi
+
+exec "${SHELL:-/bin/bash}" -l

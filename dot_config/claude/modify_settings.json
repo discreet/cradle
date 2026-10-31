@@ -1,0 +1,12 @@
+{{- /* chezmoi:modify-template */ -}}
+{{- /*
+  Claude Code also writes this file (/config, /model, /statusline, plugin
+  installs). Merge the keys declared in .chezmoitemplates/claude-settings.json
+  over whatever is live, so declared values win and runtime additions survive.
+*/ -}}
+{{- $live := dict -}}
+{{- if .chezmoi.stdin | trim -}}
+{{-   $live = .chezmoi.stdin | fromJson -}}
+{{- end -}}
+{{- $managed := includeTemplate "claude-settings.json" . | fromJson -}}
+{{- mergeOverwrite $live $managed | toPrettyJson "  " }}

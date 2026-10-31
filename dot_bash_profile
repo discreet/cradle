@@ -1,0 +1,9 @@
+# Login shells that aren't interactive (scripts, `ssh host cmd`) never reach
+# `mise activate` in ~/.bashrc; mise's shims give them its tools. Interactive
+# shells put the real tool paths ahead of the shims.
+if [[ -x /opt/homebrew/bin/mise ]]; then
+  eval "$(/opt/homebrew/bin/mise activate bash --shims)"
+fi
+
+# macOS terminals start login shells, so delegate everything to ~/.bashrc.
+[[ -r ~/.bashrc ]] && source ~/.bashrc

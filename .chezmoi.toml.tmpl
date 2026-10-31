@@ -1,0 +1,29 @@
+{{- /* Asked once on `chezmoi init`; answers are saved to ~/.config/chezmoi/chezmoi.toml. */ -}}
+{{- $name := promptStringOnce . "name" "Full name" -}}
+{{- $personalEmail := promptStringOnce . "personalEmail" "Personal git email (your GitHub noreply address keeps it private)" -}}
+{{- $workEmail := promptStringOnce . "workEmail" "Work git email (leave blank if this machine has no work identity)" -}}
+{{- $workHost := "" -}}
+{{- $workOrgs := "" -}}
+{{- if $workEmail -}}
+{{-   $workHost = promptStringOnce . "workHost" "Work git host such as gitlab.com or git.example.com" -}}
+{{-   $workOrgs = promptStringOnce . "workOrgs" "Work orgs or groups exactly as in repo URLs (space-separated; blank if every repo on that host is work)" -}}
+{{-   if not $workHost -}}
+{{-     fail "A work email needs a work git host." -}}
+{{-   end -}}
+{{-   if and (eq $workHost "github.com") (not (trim $workOrgs)) -}}
+{{-     fail "Personal repos are on github.com, so a github.com work identity needs its orgs." -}}
+{{-   end -}}
+{{- end -}}
+
+# Remembers where the repo was cloned, so later commands find it from anywhere.
+sourceDir = {{ .chezmoi.sourceDir | quote }}
+
+[data]
+  name = {{ $name | quote }}
+  personalEmail = {{ $personalEmail | quote }}
+  workEmail = {{ $workEmail | quote }}
+  workHost = {{ $workHost | quote }}
+  workOrgs = {{ $workOrgs | quote }}
+
+[edit]
+  command = "nvim"

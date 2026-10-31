@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Makes Caps Lock a Control key at login, on every keyboard (a mapping limited
+  to some keyboards misses ones that connect later). tmux's prefix, Neovim and
+  readline all lean on Control, which on a Mac keyboard sits beside fn.
+  Loaded by run_onchange_after_30-launch-agents.sh.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>local.caps-lock-control</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/hidutil</string>
+    <string>property</string>
+    <string>--set</string>
+    <string>{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x7000000E0}]}</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+</dict>
+</plist>

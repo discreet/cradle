@@ -1,0 +1,8 @@
+{{- /* Lets `git log --show-signature` verify your own SSH-signed commits. */ -}}
+{{- $ssh := joinPath .chezmoi.homeDir ".ssh" -}}
+{{- if stat (joinPath $ssh "id_ed25519.pub") -}}
+{{ .personalEmail }} {{ include (joinPath $ssh "id_ed25519.pub") | trim }}
+{{ end -}}
+{{- if and .workEmail (stat (joinPath $ssh "id_ed25519_work.pub")) -}}
+{{ .workEmail }} {{ include (joinPath $ssh "id_ed25519_work.pub") | trim }}
+{{ end -}}

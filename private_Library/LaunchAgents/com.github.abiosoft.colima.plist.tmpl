@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Starts the Colima VM (Docker) at login. Runs through mise so colima finds
+  lima and docker. Restarts only after a crash, so `colima stop` stays stopped.
+  Loaded by run_onchange_after_30-launch-agents.sh.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.github.abiosoft.colima</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/mise</string>
+    <string>exec</string>
+    <string>--</string>
+    <string>colima</string>
+    <string>start</string>
+    <string>--foreground</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>{{ .chezmoi.homeDir }}</string>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+  <key>WorkingDirectory</key>
+  <string>{{ .chezmoi.homeDir }}</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>{{ .chezmoi.homeDir }}/Library/Logs/colima.log</string>
+  <key>StandardErrorPath</key>
+  <string>{{ .chezmoi.homeDir }}/Library/Logs/colima.log</string>
+</dict>
+</plist>

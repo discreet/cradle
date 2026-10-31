@@ -1,0 +1,84 @@
+# Personal identity by default; work repos switch to work (see the end).
+[user]
+  name = {{ .name }}
+  email = {{ .personalEmail }}
+  signingkey = ~/.ssh/id_ed25519.pub
+[gpg]
+  format = ssh
+[gpg "ssh"]
+  allowedSignersFile = ~/.config/git/allowed_signers
+[commit]
+  gpgsign = true
+  verbose = true
+[tag]
+  gpgsign = true
+  sort = version:refname
+[color "status"]
+  added = green
+  changed = yellow
+  untracked = red
+[column]
+  ui = auto
+[branch]
+  sort = -committerdate
+[fetch]
+  prune = true
+[pull]
+  rebase = true
+[push]
+  autoSetupRemote = true
+  followTags = true
+[rebase]
+  autoSquash = true
+  autoStash = true
+  updateRefs = true
+[merge]
+  conflictStyle = zdiff3
+[diff]
+  algorithm = histogram
+  colorMoved = plain
+  mnemonicPrefix = true
+[rerere]
+  enabled = true
+  autoupdate = true
+[help]
+  autocorrect = prompt
+[pretty]
+  line = tformat:%C(auto,yellow)%h%C(auto,reset) %C(auto,green)(%ar)%C(auto,reset) %C(auto,bold blue)<%an>%C(auto,reset)%C(auto,red)%d%C(auto,reset) %s
+[alias]
+  lgm = log --merges
+  st = status --short --branch
+  au = add --update
+  h = log --pretty=line -1
+  hp = show --patch --pretty=line
+  l = log --graph --pretty=line
+  la = log --graph --all --pretty=line
+  lf = log --first-parent --oneline
+  my-commits = "!git log --author=\"$(git config user.email)\" --author-date-order --date=format:'%a %b %d %r' --format='%h | %ad | %s'"
+{{- if .workEmail }}
+
+# Repos whose remote is on the work host (under the work orgs, if any) use the
+# work identity. SSH remotes go through the git-work host, which offers only
+# the work key, so the host sees the work account; the rewrite also covers the
+# first clone. HTTPS remotes sign in through the keychain as usual. (git's **
+# spans folders only after a "/", so with no org the SSH pattern is host:*/**.
+# Matching is case-sensitive, so each org is listed as typed and lowercased.)
+{{- $prefixes := list "" }}
+{{- if trim .workOrgs }}
+{{-   $prefixes = list }}
+{{-   range splitList " " .workOrgs }}
+{{-     if . }}{{ $prefixes = concat $prefixes (list (printf "%s/" .) (printf "%s/" (lower .))) }}{{ end }}
+{{-   end }}
+{{- end }}
+{{- range uniq $prefixes }}
+[includeIf "hasconfig:remote.*.url:git@{{ $.workHost }}:{{ if . }}{{ . }}**{{ else }}*/**{{ end }}"]
+  path = work
+[includeIf "hasconfig:remote.*.url:ssh://git@{{ $.workHost }}/{{ . }}**"]
+  path = work
+[includeIf "hasconfig:remote.*.url:https://{{ $.workHost }}/{{ . }}**"]
+  path = work
+[url "git@git-work:{{ . }}"]
+  insteadOf = git@{{ $.workHost }}:{{ . }}
+  insteadOf = ssh://git@{{ $.workHost }}/{{ . }}
+{{- end }}
+{{- end }}
