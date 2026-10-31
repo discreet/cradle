@@ -1,0 +1,26 @@
+##############################
+# macOS
+##############################
+.DS_Store
+.AppleDouble
+.LSOverride
+# Folder icon file, named "Icon" + carriage return. The CR is literal and
+# bracketed, because git strips a CR at the end of a line.
+Icon[]
+._*
+.Spotlight-V100
+.Trashes
+
+##############################
+# Vim / Neovim
+##############################
+.*.sw[a-z]
+*.un~
+Session.vim
+.netrwhist
+
+##############################
+# Local tool overrides
+##############################
+mise.local.toml
+.mise.local.toml

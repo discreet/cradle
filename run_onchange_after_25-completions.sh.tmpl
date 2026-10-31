@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Writes bash completions for git and mise's tools once, so new shells don't
+# generate them at startup; bash-completion loads each on first Tab. Re-runs
+# whenever the global mise config changes (after mise install).
+# mise config hash: {{ include "dot_config/mise/config.toml" | sha256sum }}
+set -euo pipefail
+
+eval "$(/opt/homebrew/bin/brew shellenv)"
+eval "$(mise env --shell bash)"
+
+dir="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
+mkdir -p "$dir"
+
+ln -sf /Library/Developer/CommandLineTools/usr/share/git-core/git-completion.bash "$dir/git"
+
+for tool in kubectl helm k9s chezmoi docker colima; do
+  "$tool" completion bash >"$dir/$tool"
+done
+uv generate-shell-completion bash >"$dir/uv"
+rg --generate complete-bash >"$dir/rg"

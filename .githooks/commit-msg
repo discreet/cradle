@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Rejects commit messages that don't follow Conventional Commits
+# (https://www.conventionalcommits.org): `type(scope)!: subject`, a subject of
+# at most 72 characters, and a blank line before any body. Enabled per clone
+# by `git config core.hooksPath .githooks` (bootstrap.sh does it).
+set -euo pipefail
+
+msg=$(grep -v '^#' "$1")
+subject=$(head -n1 <<<"$msg")
+types='feat|fix|perf|refactor|docs|style|test|build|ci|chore|revert'
+
+# git's own messages for merges, reverts and autosquash pass through.
+[[ $subject =~ ^(Merge |Revert \"|fixup! |squash! |amend! ) ]] && exit 0
+
+problem=""
+if ! [[ $subject =~ ^($types)(\([a-z0-9._/-]+\))?!?:\ [^[:space:]] ]]; then
+  problem="the subject must look like 'type(scope): what changed', with type one of: ${types//|/, }"
+elif ((${#subject} > 72)); then
+  problem="the subject is ${#subject} characters; keep it to 72"
+elif [[ $(sed -n 2p <<<"$msg") =~ [^[:space:]] ]]; then
+  problem="leave a blank line between the subject and the body"
+fi
+
+if [[ -n $problem ]]; then
+  echo "commit-msg: $problem." >&2
+  echo "  got: $subject" >&2
+  exit 1
+fi

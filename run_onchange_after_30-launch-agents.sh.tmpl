@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# (Re)loads each LaunchAgent whose plist changed since this last loaded it, so
+# changes take effect without logging out and editing one agent doesn't
+# restart the others (Colima's VM). Runs after mise has installed colima.
+{{- $agents := glob (joinPath .chezmoi.sourceDir "private_Library/LaunchAgents/*") }}
+{{- range $agents }}
+# {{ base . }}: {{ include . | sha256sum }}
+{{- end }}
+set -euo pipefail
+
+domain="gui/$(id -u)"
+state="${XDG_STATE_HOME:-$HOME/.local/state}/cradle/launch-agents"
+mkdir -p "$state"
+for label in{{ range $agents }} {{ base . | trimSuffix ".tmpl" | trimSuffix ".plist" }}{{ end }}; do
+  plist="$HOME/Library/LaunchAgents/$label.plist"
+  sum=$(shasum -a 256 "$plist" | cut -d' ' -f1)
+  [[ $(cat "$state/$label" 2>/dev/null) == "$sum" ]] && continue
+  launchctl bootout "$domain" "$plist" 2>/dev/null || true
+  # bootstrap fails while a slow job is still stopping.
+  for _ in {1..30}; do
+    launchctl print "$domain/$label" >/dev/null 2>&1 || break
+    sleep 1
+  done
+  launchctl bootstrap "$domain" "$plist"
+  echo "$sum" >"$state/$label"
+done

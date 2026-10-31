@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(scripts/check)",
+      "Bash(chezmoi diff *)",
+      "Bash(chezmoi status *)",
+      "Bash(chezmoi managed *)",
+      "Bash(chezmoi source-path *)",
+      "Bash(chezmoi target-path *)",
+      "Bash(chezmoi cat *)",
+      "Bash(chezmoi re-add *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(mise ls *)",
+      "Bash(mise outdated *)",
+      "Bash(mise registry *)",
+      "Bash(shellcheck *)",
+      "Bash(git tag -a *)",
+      "Bash(git tag -l *)",
+      "Bash(git describe *)"
+    ],
+    "deny": [
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git push --force-with-lease *)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f *)",
+      "Bash(git commit --no-verify *)",
+      "Bash(git commit * --no-verify *)",
+      "Bash(git commit -n *)",
+      "Bash(git commit * -n *)",
+      "Bash(git -c commit.gpgsign=false *)",
+      "Bash(git -c tag.gpgsign=false *)",
+      "Bash(git commit --no-gpg-sign *)",
+      "Bash(git commit * --no-gpg-sign *)",
+      "Bash(git tag -d *)",
+      "Bash(git tag --delete *)",
+      "Bash(git push * --delete *)",
+      "Bash(git push --delete *)",
+      "Bash(git push * +*)",
+      "Bash(git push --mirror *)",
+      "Bash(git push * --mirror *)",
+      "Bash(git push * :*)"
+    ]
+  }
+}

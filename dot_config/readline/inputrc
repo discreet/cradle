@@ -1,0 +1,18 @@
+# Readline (bash's line editor). Loaded via INPUTRC, set in 05-env.bash.
+
+# Completion: ignore case, treat - and _ alike, list matches on the first Tab,
+# colour matches by file type and highlight the part already typed.
+set completion-ignore-case on
+set completion-map-case on
+set show-all-if-ambiguous on
+set colored-stats on
+set colored-completion-prefix on
+
+# Up/Down search history for commands starting with what's typed; so do
+# Ctrl-P/Ctrl-N, which are nearer the home row than a Mac's arrow keys.
+"\e[A": history-search-backward
+"\e[B": history-search-forward
+"\eOA": history-search-backward
+"\eOB": history-search-forward
+"\C-p": history-search-backward
+"\C-n": history-search-forward

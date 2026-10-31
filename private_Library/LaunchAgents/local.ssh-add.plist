@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Loads SSH keys whose passphrases are in the macOS keychain into ssh-agent
+  at login. Git signs commits through the agent; without this, commits ask
+  for the passphrase until the first ssh connection loads the key.
+  Loaded by run_onchange_after_30-launch-agents.sh.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>local.ssh-add</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/ssh-add</string>
+    <string>--apple-load-keychain</string>
+    <string>-q</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+</dict>
+</plist>

@@ -1,0 +1,9 @@
+# Files chezmoi downloads from other repos, each pinned to a commit so nothing
+# changes until the commit here does. To update one: read the changes at its
+# history link, put the new commit in its url, then `chezmoi apply`.
+
+# Claude Code skill: find-skills (a single file). Changes since this commit:
+# https://github.com/vercel-labs/skills/commits/main/skills/find-skills
+[".config/claude/skills/find-skills/SKILL.md"]
+  type = "file"
+  url = "https://raw.githubusercontent.com/vercel-labs/skills/773fb2c7bbf16781670a3520affc4abd0c6151ae/skills/find-skills/SKILL.md"

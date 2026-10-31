@@ -1,0 +1,8 @@
+README.md
+Brewfile
+bootstrap.sh
+CLAUDE.md
+scripts
+{{- if not .workEmail }}
+.config/git/work
+{{- end }}

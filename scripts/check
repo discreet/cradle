@@ -1,0 +1,281 @@
+#!/usr/bin/env bash
+# Checks the repo without touching this Mac: renders every dotfile into a
+# throwaway home folder and runs each one through the tool that reads it.
+# Run before `chezmoi apply`; exits non-zero if anything fails.
+# The helper functions run through `check`, which shellcheck can't see, and
+# the `~` paths below are literal: they're what git and ssh report.
+# shellcheck disable=SC2329,SC2088
+set -uo pipefail
+
+repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+tmp=$(mktemp -d)
+home=$tmp/home
+mkdir -p "$home"
+# Claude runs inside tmux, so the test server must ignore $TMUX or it would
+# reach the real one.
+t() { env -u TMUX TMUX_TMPDIR="$tmp" tmux -L check "$@"; }
+trap 't kill-server 2>/dev/null; rm -rf "$tmp"' EXIT
+failed=0
+
+check() { # check <description> <command...>
+  local out
+  if out=$("${@:2}" 2>&1); then
+    echo "ok    $1"
+  else
+    echo "FAIL  $1"
+    while IFS= read -r line; do echo "      $line"; done <<<"$out"
+    failed=1
+  fi
+}
+skip() { echo "skip  $1"; }
+have() { command -v "$1" >/dev/null; }
+
+# Rendered three times: work on github.com beside personal, under two orgs
+# (most checks use this one); work on its own host; and no work identity.
+setup() { # setup <name> <work email> <work host> <work orgs>
+  mkdir -p "$tmp/$1"
+  cat >"$tmp/$1.toml" <<EOF
+sourceDir = "$repo"
+[data]
+  name = "Check"
+  personalEmail = "personal@example.com"
+  workEmail = "$2"
+  workHost = "$3"
+  workOrgs = "$4"
+EOF
+}
+setup home work@example.com github.com "Example-Org other-org"
+setup home-selfhosted work@example.com git.example.com ""
+setup home-personal "" "" ""
+home2=$tmp/home-personal
+home3=$tmp/home-selfhosted
+czh() { # czh <name> <chezmoi args...>
+  HOME=$tmp/$1 chezmoi --config "$tmp/$1.toml" --persistent-state "$tmp/$1.boltdb" "${@:2}"
+}
+cz() { czh home "$@"; }
+# A machine chezmoi hasn't seen, so the init questions take the answers given.
+cz_new() { HOME=$tmp/new chezmoi --config "$tmp/new.toml" --persistent-state "$tmp/new.boltdb" "$@"; }
+mkdir -p "$tmp/new"
+toml() { cz execute-template "{{ include \"$1\" | fromToml | len }}" >/dev/null; }
+
+# Shell files source each other at runtime, which shellcheck can't follow.
+sc() { shellcheck -s bash -e SC1090,SC1091 "$@"; }
+sc_script() {
+  if [[ $1 == *.tmpl ]]; then
+    cz execute-template <"$1" | sc -
+  else
+    sc "$1"
+  fi
+}
+inputrc() {
+  local out
+  out=$(INPUTRC=/dev/null bash --norc --noprofile -i -c "bind -f '$1'" 2>&1 |
+    grep -v -e 'terminal process group' -e 'no job control')
+  [[ -z $out ]] || { echo "$out"; return 1; }
+  # Readline silently ignores unknown function names, so look those up too.
+  local fns fn
+  fns=$(bash --norc --noprofile -i -c 'bind -l' 2>/dev/null)
+  while read -r fn; do
+    grep -qxF "$fn" <<<"$fns" || { echo "unknown readline function: $fn"; return 1; }
+  done < <(sed -nE 's/^[^#]*:[[:space:]]*([a-z-]+)[[:space:]]*$/\1/p' "$1")
+}
+lua_syntax() {
+  nvim --clean --headless -c "lua for _, f in ipairs(vim.fn.globpath('$1', '**/*.lua', false, true)) do
+      local ok, err = loadfile(f)
+      if not ok then io.stderr:write(err .. '\n'); vim.cmd('cquit') end
+    end" -c qall
+}
+identity() { # identity <home> <remote url> <email> <signing key> [rewritten url]
+  local dir=$tmp/identity got
+  rm -rf "$dir"
+  git init -q "$dir"
+  git -C "$dir" remote add origin "$2"
+  g() { HOME=$1 XDG_CONFIG_HOME=$1/.config git -C "$dir" "${@:2}"; }
+  got="$(g "$1" config user.email) $(g "$1" config user.signingkey) $(g "$1" ls-remote --get-url origin)"
+  [[ $got == "$3 $4 ${5:-$2}" ]] || { echo "expected: $3 $4 ${5:-$2}"; echo "got:      $got"; return 1; }
+}
+ssh_key() { # ssh_key <ssh config> <host> <the only key ssh should offer>
+  local got
+  got=$(ssh -G -F "$1" "$2" | sed -n 's/^identityfile //p')
+  [[ $got == "$3" ]] || { echo "expected $3, got: $got"; return 1; }
+}
+ssh_only() { # ssh_only <ssh config> <host>: keys in the agent aren't offered
+  ssh -G -F "$1" "$2" | grep -qx 'identitiesonly yes' || { echo "IdentitiesOnly is off for $2"; return 1; }
+}
+claude_merge() { # managed Claude settings merge over a live file and keep its keys
+  local live=$tmp/merge/.config/claude/settings.json out
+  mkdir -p "${live%/*}"
+  echo '{"model":"opus","theme":"dark","permissions":{"allow":["Bash(ls *)"]}}' >"$live"
+  out=$(HOME=$tmp/merge chezmoi --config "$tmp/home.toml" --persistent-state "$tmp/merge.boltdb" cat "$live") || return 1
+  jq -e '.model == "opus" and .theme == "auto" and .permissions.allow == ["Bash(ls *)"]
+    and (.permissions.ask | length > 0)' <<<"$out" >/dev/null || { echo "$out"; return 1; }
+}
+ssh_host() { # ssh_host <ssh config> <alias> <expected hostname>
+  local got
+  got=$(ssh -G -F "$1" "$2" | sed -n 's/^hostname //p')
+  [[ $got == "$3" ]] || { echo "expected $3, got: $got"; return 1; }
+}
+own_identity() { # this repo's commits use the personal identity
+  local want got
+  want=$(chezmoi execute-template '{{ .personalEmail }}' 2>/dev/null)
+  got=$(git -C "$repo" config user.email)
+  [[ $got == "$want" ]] || { echo "cradle commits as '$got', not the personal '$want'"; return 1; }
+}
+hooks_enabled() {
+  [[ $(git -C "$repo" config core.hooksPath) == .githooks ]] ||
+    { echo "the commit-msg hook is off; run: git config core.hooksPath .githooks"; return 1; }
+}
+commit_messages() { # every commit passes the commit-msg hook
+  local sha out bad=0
+  while read -r sha; do
+    git -C "$repo" log -1 --format=%B "$sha" >"$tmp/msg"
+    out=$("$repo/.githooks/commit-msg" "$tmp/msg" 2>&1) || { echo "${sha:0:7} $out"; bad=1; }
+  done < <(git -C "$repo" rev-list HEAD)
+  return "$bad"
+}
+signed_commits() { # looks for the signature itself; verifying needs allowed_signers
+  local sha bad=0
+  while read -r sha; do
+    git -C "$repo" cat-file commit "$sha" | grep -q '^gpgsig' ||
+      { echo "unsigned: $(git -C "$repo" log -1 --format='%h %s' "$sha")"; bad=1; }
+  done < <(git -C "$repo" rev-list HEAD)
+  return "$bad"
+}
+release_tags() { # every tag is an annotated, signed vMAJOR.MINOR.PATCH
+  local tag type bad=0
+  while read -r tag type; do
+    [[ $tag =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] ||
+      { echo "$tag: not vMAJOR.MINOR.PATCH"; bad=1; }
+    if [[ $type != tag ]]; then
+      echo "$tag: a lightweight tag; releases are annotated"
+      bad=1
+    elif ! git -C "$repo" cat-file tag "$tag" | grep -q 'BEGIN SSH SIGNATURE'; then
+      echo "$tag: not signed"
+      bad=1
+    fi
+  done < <(git -C "$repo" for-each-ref refs/tags --format='%(refname:short) %(objecttype)')
+  return "$bad"
+}
+nvim_start() {
+  local out
+  out=$(XDG_CONFIG_HOME=$home/.config XDG_DATA_HOME=$HOME/.local/share \
+    XDG_STATE_HOME=$tmp/state XDG_CACHE_HOME=$tmp/cache nvim --headless +qall 2>&1)
+  [[ -z $out ]] || { echo "$out"; return 1; }
+}
+
+cd "$repo" || exit 1
+
+check "chezmoi renders every file" cz apply --force --no-tty --exclude=scripts,externals
+check "chezmoi renders every file with work on its own host" \
+  czh home-selfhosted apply --force --no-tty --exclude=scripts,externals
+check "chezmoi renders every file without a work identity" \
+  czh home-personal apply --force --no-tty --exclude=scripts,externals
+if [[ $failed == 1 ]]; then
+  echo "Nothing else can be checked until the files render."
+  exit 1
+fi
+check "chezmoi init questions render" cz_new execute-template --init \
+  --promptString "Full name=Check,Personal git email (your GitHub noreply address keeps it private)=personal@example.com,Work git email (leave blank if this machine has no work identity)=work@example.com,Work git host such as gitlab.com or git.example.com=gitlab.com,Work orgs or groups exactly as in repo URLs (space-separated; blank if every repo on that host is work)=" \
+  <.chezmoi.toml.tmpl
+refuses() { # refuses <expected message> <command...>: fails, saying that
+  local out
+  if out=$("${@:2}" 2>&1); then echo "it didn't refuse"; return 1; fi
+  grep -qF "$1" <<<"$out" || { echo "$out"; return 1; }
+}
+check "chezmoi init refuses github.com work without orgs" \
+  refuses "a github.com work identity needs its orgs" cz_new execute-template --init \
+  --promptString "Full name=Check,Personal git email (your GitHub noreply address keeps it private)=personal@example.com,Work git email (leave blank if this machine has no work identity)=work@example.com,Work git host such as gitlab.com or git.example.com=github.com,Work orgs or groups exactly as in repo URLs (space-separated; blank if every repo on that host is work)=" \
+  <.chezmoi.toml.tmpl
+check ".chezmoiexternal.toml is valid TOML" toml "$repo/.chezmoiexternal.toml"
+check "mise config is valid TOML" toml "$home/.config/mise/config.toml"
+
+for f in bootstrap.sh scripts/check .githooks/commit-msg run_*; do
+  check "shellcheck $f" sc_script "$f"
+done
+check "shellcheck bash startup files" sc "$home/.bash_profile" "$home/.bashrc" \
+  "$home"/.config/bash/rc.d/*.bash "$home/.local/bin/tmux-pick"
+check "readline loads inputrc" inputrc "$home/.config/readline/inputrc"
+
+if have tmux; then
+  t -f /dev/null new-session -d
+  check "tmux loads tmux.conf" t source-file "$home/.config/tmux/tmux.conf"
+else
+  skip "tmux (not installed)"
+fi
+
+check "git reads its config" git config --file "$home/.config/git/config" --list
+check "git: personal repo uses the personal identity" identity "$home" \
+  git@github.com:someone/repo.git personal@example.com "~/.ssh/id_ed25519.pub"
+check "git: work org repo (SSH) uses the work identity and key" identity "$home" \
+  git@github.com:other-org/repo.git work@example.com "~/.ssh/id_ed25519_work.pub" \
+  git@git-work:other-org/repo.git
+check "git: work org repo (HTTPS) uses the work identity, stays HTTPS" identity "$home" \
+  https://github.com/example-org/repo.git work@example.com "~/.ssh/id_ed25519_work.pub"
+check "git: org typed Example-Org matches its URL casing" identity "$home" \
+  git@github.com:Example-Org/repo.git work@example.com "~/.ssh/id_ed25519_work.pub" \
+  git@git-work:Example-Org/repo.git
+check "git: work repo on its own host (scp-style)" identity "$home3" \
+  git@git.example.com:team/app.git work@example.com "~/.ssh/id_ed25519_work.pub" \
+  git@git-work:team/app.git
+check "git: work repo on its own host (ssh://)" identity "$home3" \
+  ssh://git@git.example.com/team/app.git work@example.com "~/.ssh/id_ed25519_work.pub" \
+  git@git-work:team/app.git
+check "git: work repo on its own host (HTTPS)" identity "$home3" \
+  https://git.example.com/team/app.git work@example.com "~/.ssh/id_ed25519_work.pub"
+check "git: GitHub stays personal when work has its own host" identity "$home3" \
+  git@github.com:someone/repo.git personal@example.com "~/.ssh/id_ed25519.pub"
+check "git: without a work identity, everything is personal" identity "$home2" \
+  git@github.com:example-org/repo.git personal@example.com "~/.ssh/id_ed25519.pub"
+check "ssh: github.com offers only the personal key" ssh_key "$home/.ssh/config" github.com "~/.ssh/id_ed25519"
+check "ssh: github.com ignores other keys in the agent" ssh_only "$home/.ssh/config" github.com
+check "ssh: git-work offers only the work key" ssh_key "$home/.ssh/config" git-work "~/.ssh/id_ed25519_work"
+check "ssh: git-work points at the work host" ssh_host "$home3/.ssh/config" git-work git.example.com
+check "ssh: without a work identity, the personal key" ssh_key "$home2/.ssh/config" github.com "~/.ssh/id_ed25519"
+if [[ -n $(chezmoi execute-template '{{ .personalEmail }}' 2>/dev/null) ]]; then
+  check "this repo commits as the personal identity" own_identity
+else
+  skip "this repo's identity (chezmoi not set up on this machine)"
+fi
+
+check "commit-msg hook is enabled" hooks_enabled
+if git -C "$repo" rev-parse -q --verify HEAD >/dev/null; then
+  check "commit messages follow Conventional Commits" commit_messages
+  check "commits are signed" signed_commits
+else
+  skip "commit history (no commits yet)"
+fi
+check "tags are annotated, signed vMAJOR.MINOR.PATCH" release_tags
+check "ssh reads GitHub's host keys" ssh-keygen -lf "$home/.ssh/known_hosts.github"
+for f in "$home"/Library/LaunchAgents/*.plist; do
+  check "plist ${f##*/}" plutil -lint "$f"
+done
+check "Claude settings merge over a live file" claude_merge
+check "JSON settings parse" jq empty "$home/.config/claude/settings.json" \
+  "$home/.docker/config.json" "$repo/.claude/settings.json"
+
+if have nvim; then
+  check "Neovim Lua syntax" lua_syntax "$home/.config/nvim"
+  if [[ -d $HOME/.local/share/nvim/lazy ]]; then
+    check "Neovim starts without errors" nvim_start
+  else
+    skip "Neovim startup (plugins not installed yet)"
+  fi
+else
+  skip "Neovim (not installed)"
+fi
+
+ghostty=/Applications/Ghostty.app/Contents/MacOS/ghostty
+if [[ -x $ghostty ]]; then
+  check "Ghostty validates its config" "$ghostty" +validate-config \
+    --config-file="$home/.config/ghostty/config"
+else
+  skip "Ghostty (not installed)"
+fi
+
+if have brew; then
+  check "Brewfile parses" brew bundle list --all --file="$repo/Brewfile"
+else
+  skip "Brewfile (Homebrew not installed)"
+fi
+
+exit $failed

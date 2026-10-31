@@ -1,0 +1,21 @@
+# https://ghostty.org/docs/config/reference
+# Ghostty ships JetBrains Mono with Nerd Font symbols; set font-family to override.
+theme = Gruvbox Dark
+font-size = 12
+
+window-width = 150
+window-height = 50
+window-padding-x = 10
+window-padding-y = 10
+
+# Block cursor everywhere: shell integration would otherwise use a bar at the
+# prompt.
+cursor-style-blink = false
+shell-integration-features = no-cursor
+
+# Option is Alt, for word movement in bash and Alt bindings in tmux and Neovim.
+macos-option-as-alt = true
+
+# The first window at launch opens tmux: a list of sessions to attach to, or a
+# new one. Later windows and tabs are plain shells.
+initial-command = shell:~/.local/bin/tmux-pick
