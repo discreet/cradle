@@ -2,7 +2,15 @@ README.md
 Brewfile
 bootstrap.sh
 CLAUDE.md
+obsidian
 scripts
 {{- if not .workEmail }}
 .config/git/work
+{{- end }}
+{{- if not .obsidianVault }}
+.config/claude/skills/journal
+.local/bin/journal-data
+.local/bin/obsidian-journal
+.local/bin/journal-slack-check
+Library/LaunchAgents/local.obsidian-journal.plist
 {{- end }}

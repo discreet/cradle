@@ -92,6 +92,7 @@ and every tag.
 | A file from someone else's repo | `.chezmoiexternal.toml`, pinned to a commit, with a link to its history above the entry |
 | A Neovim plugin | `dot_config/nvim/lua/plugins/`; then `chezmoi re-add ~/.config/nvim/lazy-lock.json` after it installs. Its language server goes in mise and `vim.lsp.enable` in `plugins/lsp.lua` |
 | Claude Code settings, plugins, MCP servers | see the Claude Code section of README.md |
+| Obsidian settings or vault templates | `obsidian/`, applied to the vault by `run_onchange_after_35-obsidian.sh.tmpl` (JSON settings are merged into the vault's `.obsidian/` files) |
 | A file in the repo that must not land in `~` | `.chezmoiignore` (names starting with `.` are skipped already) |
 
 ## Decisions
@@ -147,6 +148,20 @@ are listed so they aren't proposed again without a reason.
 - **Claude Code:** from mise with its auto-updater off; config in
   `~/.config/claude` via `CLAUDE_CONFIG_DIR`; terminal only, no desktop app or
   IDE extension.
+- **Obsidian:** Claude uses the vault as plain files (an extra working
+  folder), not through an MCP server or plugin. Each machine is asked for the
+  vault path and folders Claude must not read (denied to its file tools,
+  forbidden otherwise by the global instructions). The `journal` skill
+  summarises the day's Claude Code sessions and git commits into a
+  `## Terminal` section of the daily note, run by a LaunchAgent every evening
+  at 18:00. Slack conversations go in a `## Slack` section via the claude.ai
+  Slack connector; headless `claude -p` doesn't load connectors (tested,
+  2.1.314), so a SessionStart hook has the next interactive session offer to
+  fill it (chosen over on-demand only and a local Slack MCP server with a
+  token). Daily notes are managed from `obsidian/`: `Daily/YYYY-MM-DD.md`,
+  from `Templates/Daily.md`, which the repo overwrites (the user chose a
+  managed template over a create-once one). Shell history was left out on purpose; per-session summaries and
+  an on-demand-only journal were declined.
 - **Downloads from other repos** are pinned to a commit and updated by hand
   after reading what changed.
 - **No links to or names of the old repos** this setup replaced, anywhere in

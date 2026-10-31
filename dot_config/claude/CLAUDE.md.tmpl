@@ -1,0 +1,41 @@
+# This Mac
+
+This Mac's setup (command-line tools, apps, dotfiles, macOS settings and
+Claude Code's own settings) is managed by chezmoi from the cradle repo, at
+`chezmoi source-path` (normally `~/Documents/cradle`).
+
+When asked to install, update, change or remove anything about this machine's
+setup, from any folder, read that repo's CLAUDE.md and make the change there.
+Don't edit the managed files in `~` directly, and don't install tools
+globally with `brew install`, `npm install -g`, `pip install`, `uv tool
+install` or `go install`; they belong in the repo's mise config or Brewfile.
+Project dependencies inside a project are fine.
+{{- if .obsidianVault }}
+
+# Obsidian
+
+The user's Obsidian vault is `{{ .obsidianVault }}`: plain Markdown files that
+Obsidian syncs. Read, search and link notes there whenever it helps, from any
+project.
+{{- $private := list }}
+{{- range splitList ";" .obsidianPrivate }}{{ $f := trim . | trimSuffix "/" }}{{ if $f }}{{ $private = append $private $f }}{{ end }}{{ end }}
+{{- if $private }}
+
+Never read these folders, with file tools, `grep`, `cat` or any other
+command. Claude Code's permissions block its file tools there; shell commands
+are kept out only by this rule.
+{{- range $private }}
+- `{{ . }}`
+{{- end }}
+{{- end }}
+
+- Write the Obsidian way: `[[wikilinks]]` to other notes, properties (YAML
+  frontmatter) where notes use them, attachments where the vault keeps them.
+- Add or edit notes when asked, or when a skill says to. Never move, rename or
+  delete notes, or change `.obsidian/`, without asking.
+- The Daily notes and Templates settings and `Templates/Daily.md` are managed
+  from the cradle repo's `obsidian/` folder; change them there, not in the
+  vault.
+- The `journal` skill writes the day's Claude Code sessions and git commits
+  into the daily note; a LaunchAgent runs it every evening at 18:00.
+{{- end }}

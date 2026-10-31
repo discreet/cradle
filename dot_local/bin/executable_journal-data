@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Prints what happened on a day, for the journal skill: each Claude Code
+# session (its folder, the user's prompts and Claude's replies, shortened) and
+# the user's commits in the git repos under the home folder.
+# Usage: journal-data [YYYY-MM-DD]  (default: today)
+set -euo pipefail
+
+day=${1:-$(date +%F)}
+from=$(date -j -f '%Y-%m-%d %H:%M:%S' "$day 00:00:00" +%s)
+to=$(date -j -v+1d -f '%Y-%m-%d %H:%M:%S' "$day 00:00:00" +%s)
+start=$(date -u -r "$from" +%Y-%m-%dT%H:%M:%SZ)
+end=$(date -u -r "$to" +%Y-%m-%dT%H:%M:%SZ)
+projects="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects"
+# The evening run works from here; its own session isn't part of the day.
+skip="${XDG_STATE_HOME:-$HOME/.local/state}/cradle/journal"
+
+echo "# Claude Code sessions on $day"
+cwds=()
+while IFS= read -r f; do
+  lines=$(jq -r --arg s "$start" --arg e "$end" --arg skip "$skip" '
+    select(.timestamp? and .timestamp >= $s and .timestamp < $e and .cwd != $skip) |
+    if .type == "user" and (.message.content | type) == "string"
+      and (.message.content | startswith("<") | not) then
+      "\(.cwd)\tuser: \(.message.content[:400] | gsub("\\s+"; " "))"
+    elif .type == "assistant" then
+      .message.content[]? | select(.type == "text") |
+      "\(.cwd)\tclaude: \(.text[:400] | gsub("\\s+"; " "))"
+    else empty end' "$f" 2>/dev/null) || continue
+  [[ -n $lines ]] || continue
+  cwd=$(head -n1 <<<"$lines" | cut -f1)
+  cwds+=("$cwd")
+  echo
+  echo "## ${cwd/#$HOME/\~}"
+  cut -f2- <<<"$lines"
+done < <(find "$projects" -name '*.jsonl' -not -path '*/subagents/*' -newermt "$day 00:00:00" 2>/dev/null)
+
+echo
+echo "# Commits on $day"
+{
+  find "$HOME" -maxdepth 4 \( -name Library -o -name .Trash -o -name node_modules \
+    -o -name .cache -o -name .local \) -prune -o -name .git -print 2>/dev/null |
+    sed 's#/\.git$##'
+  for cwd in "${cwds[@]}"; do git -C "$cwd" rev-parse --show-toplevel 2>/dev/null || true; done
+} | sort -u | while IFS= read -r repo; do
+  email=$(git -C "$repo" config user.email 2>/dev/null) || continue
+  log=$(git -C "$repo" log --all --since="$start" --until="$end" --author="$email" \
+    --format='%h %s' 2>/dev/null) || continue
+  [[ -n $log ]] || continue
+  echo
+  echo "## ${repo/#$HOME/\~}"
+  echo "$log"
+done

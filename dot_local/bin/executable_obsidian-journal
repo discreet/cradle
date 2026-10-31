@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Run every evening by the local.obsidian-journal LaunchAgent: if anything
+# happened today, Claude writes the day's summary into today's daily note with
+# the journal skill. Log: ~/Library/Logs/obsidian-journal.log.
+set -euo pipefail
+
+# launchd's PATH is minimal: mise's shims (claude), ~/.local/bin and Apple's git.
+PATH="${MISE_DATA_DIR:-$HOME/.local/share/mise}/shims:$HOME/.local/bin:/Library/Developer/CommandLineTools/usr/bin:/usr/bin:/bin"
+echo "== $(date)"
+if ! journal-data | grep -q '^## '; then
+  echo "Nothing happened today."
+  exit 0
+fi
+# journal-data leaves out sessions in this folder, so this run isn't journaled.
+dir="${XDG_STATE_HOME:-$HOME/.local/state}/cradle/journal"
+mkdir -p "$dir"
+cd "$dir"
+claude -p "Use the journal skill to write today's summary into my Obsidian daily note." \
+  --permission-mode acceptEdits --allowedTools "Bash(journal-data *)"

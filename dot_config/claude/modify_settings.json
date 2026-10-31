@@ -9,4 +9,25 @@
 {{-   $live = .chezmoi.stdin | fromJson -}}
 {{- end -}}
 {{- $managed := includeTemplate "claude-settings.json" . | fromJson -}}
+{{- /*
+  The Obsidian vault is a working folder in every session; Claude's file
+  tools can't read or edit the folders named as private; and each session
+  starts by checking for a missing Slack summary (journal-slack-check).
+*/ -}}
+{{- if .obsidianVault -}}
+{{-   $_ := set $managed.permissions "additionalDirectories" (list .obsidianVault) -}}
+{{-   $check := dict "type" "command" "command" (joinPath .chezmoi.homeDir ".local/bin/journal-slack-check") -}}
+{{-   $_ := set $managed "hooks" (dict "SessionStart" (list (dict "hooks" (list $check)))) -}}
+{{-   $deny := list -}}
+{{-   range splitList ";" .obsidianPrivate -}}
+{{-     $folder := trim . | trimSuffix "/" -}}
+{{-     if $folder -}}
+{{-       $path := printf "/%s/%s/**" $.obsidianVault $folder -}}
+{{-       $deny = concat $deny (list (printf "Read(%s)" $path) (printf "Edit(%s)" $path)) -}}
+{{-     end -}}
+{{-   end -}}
+{{-   if $deny -}}
+{{-     $_ := set $managed.permissions "deny" $deny -}}
+{{-   end -}}
+{{- end -}}
 {{- mergeOverwrite $live $managed | toPrettyJson "  " }}

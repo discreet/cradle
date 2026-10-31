@@ -13,6 +13,7 @@ state="${XDG_STATE_HOME:-$HOME/.local/state}/cradle/launch-agents"
 mkdir -p "$state"
 for label in{{ range $agents }} {{ base . | trimSuffix ".tmpl" | trimSuffix ".plist" }}{{ end }}; do
   plist="$HOME/Library/LaunchAgents/$label.plist"
+  [[ -f $plist ]] || continue # not installed on this machine (.chezmoiignore)
   sum=$(shasum -a 256 "$plist" | cut -d' ' -f1)
   [[ $(cat "$state/$label" 2>/dev/null) == "$sum" ]] && continue
   launchctl bootout "$domain" "$plist" 2>/dev/null || true

@@ -14,6 +14,12 @@
 {{-     fail "Personal repos are on github.com, so a github.com work identity needs its orgs." -}}
 {{-   end -}}
 {{- end -}}
+{{- $obsidianVault := promptStringOnce . "obsidianVault" "Obsidian vault folder for Claude (leave blank for none)" -}}
+{{- $obsidianPrivate := "" -}}
+{{- if $obsidianVault -}}
+{{-   $obsidianVault = regexReplaceAll "^~" $obsidianVault .chezmoi.homeDir | trimSuffix "/" -}}
+{{-   $obsidianPrivate = promptStringOnce . "obsidianPrivate" "Vault folders Claude must not read (separated by semicolons; blank for none)" -}}
+{{- end -}}
 
 # Remembers where the repo was cloned, so later commands find it from anywhere.
 sourceDir = {{ .chezmoi.sourceDir | quote }}
@@ -24,6 +30,8 @@ sourceDir = {{ .chezmoi.sourceDir | quote }}
   workEmail = {{ $workEmail | quote }}
   workHost = {{ $workHost | quote }}
   workOrgs = {{ $workOrgs | quote }}
+  obsidianVault = {{ $obsidianVault | quote }}
+  obsidianPrivate = {{ $obsidianPrivate | quote }}
 
 [edit]
   command = "nvim"
