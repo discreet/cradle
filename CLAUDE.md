@@ -128,8 +128,9 @@ are listed so they aren't proposed again without a reason.
 - **Git identities:** personal and work, on separate accounts. Personal is on
   GitHub; work can be any git host (GitHub, GitLab, self-hosted), so nothing
   may assume GitHub for work. Each machine is asked for a name, a personal
-  email, and optionally a work email, work host and work orgs/groups (blank:
-  the whole host is work; required when the work host is github.com). Repos
+  email, and optionally a work email, work host, work orgs/groups (blank:
+  the whole host is work; required when the work host is github.com) and work
+  folders (for agentdb only; git still goes by remote). Repos
   whose remote matches use the work email and `~/.ssh/id_ed25519_work`; SSH
   remotes reach the host through the `git-work` SSH alias (git rewrites their
   URLs), which offers only that key; personal hosts get `IdentitiesOnly` so a
@@ -147,7 +148,13 @@ are listed so they aren't proposed again without a reason.
 - **Docker:** Colima from mise, started by a LaunchAgent, default VM size.
 - **Claude Code:** from mise with its auto-updater off; config in
   `~/.config/claude` via `CLAUDE_CONFIG_DIR`; terminal only, no desktop app or
-  IDE extension.
+  IDE extension. MCP servers are registered by
+  `run_onchange_after_45-claude-mcp.sh.tmpl`. agentdb (npm, ruvnet) is the
+  memory MCP server, with separate work and personal databases
+  (`~/.local/bin/agentdb-mcp`). A session is work when git's identity in its
+  folder is work or the folder is under a work folder (`workFolders`, asked
+  per machine with a work identity); anything else is personal. One shared
+  database, one per project and marker files were rejected.
 - **Obsidian:** Claude uses the vault as plain files (an extra working
   folder), not through an MCP server or plugin. Each machine is asked for the
   vault path and folders Claude must not read (denied to its file tools,

@@ -32,7 +32,7 @@ have() { command -v "$1" >/dev/null; }
 
 # Rendered three times: work on github.com beside personal, under two orgs
 # (most checks use this one); work on its own host; and no work identity.
-setup() { # setup <name> <work email> <work host> <work orgs> [vault] [private folders]
+setup() { # setup <name> <work email> <work host> <work orgs> [vault] [private folders] [work folders]
   mkdir -p "$tmp/$1"
   cat >"$tmp/$1.toml" <<EOF
 sourceDir = "$repo"
@@ -44,10 +44,11 @@ sourceDir = "$repo"
   workOrgs = "$4"
   obsidianVault = "${5:-}"
   obsidianPrivate = "${6:-}"
+  workFolders = "${7:-}"
 EOF
 }
 vault=$tmp/vault
-setup home work@example.com github.com "Example-Org other-org" "$vault" "Team Stuff; Private/HR/"
+setup home work@example.com github.com "Example-Org other-org" "$vault" "Team Stuff; Private/HR/" "$tmp/work;$tmp/clients b"
 setup home-selfhosted work@example.com git.example.com ""
 setup home-personal "" "" ""
 home2=$tmp/home-personal
@@ -96,6 +97,15 @@ identity() { # identity <home> <remote url> <email> <signing key> [rewritten url
   g() { HOME=$1 XDG_CONFIG_HOME=$1/.config git -C "$dir" "${@:2}"; }
   got="$(g "$1" config user.email) $(g "$1" config user.signingkey) $(g "$1" ls-remote --get-url origin)"
   [[ $got == "$3 $4 ${5:-$2}" ]] || { echo "expected: $3 $4 ${5:-$2}"; echo "got:      $got"; return 1; }
+}
+agentdb_db() { # agentdb_db <home> <folder> <remote url, or "" for no repo> <expected database>
+  local bin=$tmp/agentdb-bin got
+  mkdir -p "$bin" "$2"
+  # shellcheck disable=SC2016 # a fake agentdb that prints the database it's given
+  printf '#!/bin/sh\necho "$AGENTDB_PATH"\n' >"$bin/agentdb" && chmod +x "$bin/agentdb"
+  if [[ -n $3 ]]; then git init -q "$2" && git -C "$2" remote add origin "$3"; fi
+  got=$(cd "$2" && HOME=$1 XDG_CONFIG_HOME=$1/.config PATH=$bin:$PATH "$1/.local/bin/agentdb-mcp")
+  [[ $got == "$1/.local/share/agentdb/$4.db" ]] || { echo "expected $4.db, got: $got"; return 1; }
 }
 ssh_key() { # ssh_key <ssh config> <host> <the only key ssh should offer>
   local got
@@ -261,9 +271,13 @@ if [[ $failed == 1 ]]; then
   echo "Nothing else can be checked until the files render."
   exit 1
 fi
-check "chezmoi init questions render" cz_new execute-template --init \
-  --promptString "Full name=Check,Personal git email (your GitHub noreply address keeps it private)=personal@example.com,Work git email (leave blank if this machine has no work identity)=work@example.com,Work git host such as gitlab.com or git.example.com=gitlab.com,Work orgs or groups exactly as in repo URLs (space-separated; blank if every repo on that host is work)=,Obsidian vault folder for Claude (leave blank for none)=~/Notes,Vault folders Claude must not read (separated by semicolons; blank for none)=HR" \
-  <.chezmoi.toml.tmpl
+init_answers() { # renders .chezmoi.toml.tmpl with a full set of answers
+  cz_new execute-template --init \
+  --promptString "Full name=Check,Personal git email (your GitHub noreply address keeps it private)=personal@example.com,Work git email (leave blank if this machine has no work identity)=work@example.com,Work git host such as gitlab.com or git.example.com=gitlab.com,Work orgs or groups exactly as in repo URLs (space-separated; blank if every repo on that host is work)=,Folders for Claude's work memory in or outside git (separated by semicolons; blank for none)=~/work; ~/clients b/,Obsidian vault folder for Claude (leave blank for none)=~/Notes,Vault folders Claude must not read (separated by semicolons; blank for none)=HR" \
+  <"$repo/.chezmoi.toml.tmpl"
+}
+check "chezmoi init questions render" init_answers
+check "chezmoi init: work folders get ~ expanded, trailing / dropped" grep -qF "workFolders = \"$tmp/new/work;$tmp/new/clients b\"" <(init_answers)
 refuses() { # refuses <expected message> <command...>: fails, saying that
   local out
   if out=$("${@:2}" 2>&1); then echo "it didn't refuse"; return 1; fi
@@ -271,7 +285,7 @@ refuses() { # refuses <expected message> <command...>: fails, saying that
 }
 check "chezmoi init refuses github.com work without orgs" \
   refuses "a github.com work identity needs its orgs" cz_new execute-template --init \
-  --promptString "Full name=Check,Personal git email (your GitHub noreply address keeps it private)=personal@example.com,Work git email (leave blank if this machine has no work identity)=work@example.com,Work git host such as gitlab.com or git.example.com=github.com,Work orgs or groups exactly as in repo URLs (space-separated; blank if every repo on that host is work)=" \
+  --promptString "Full name=Check,Personal git email (your GitHub noreply address keeps it private)=personal@example.com,Work git email (leave blank if this machine has no work identity)=work@example.com,Work git host such as gitlab.com or git.example.com=github.com,Work orgs or groups exactly as in repo URLs (space-separated; blank if every repo on that host is work)=,Folders for Claude's work memory in or outside git (separated by semicolons; blank for none)=" \
   <.chezmoi.toml.tmpl
 check ".chezmoiexternal.toml is valid TOML" toml "$repo/.chezmoiexternal.toml"
 check "mise config is valid TOML" toml "$home/.config/mise/config.toml"
@@ -298,6 +312,13 @@ check "git: work org repo (SSH) uses the work identity and key" identity "$home"
   git@git-work:other-org/repo.git
 check "git: work org repo (HTTPS) uses the work identity, stays HTTPS" identity "$home" \
   https://github.com/example-org/repo.git work@example.com "~/.ssh/id_ed25519_work.pub"
+check "agentdb: work repo uses the work database" agentdb_db "$home" "$tmp/a/1" git@github.com:other-org/repo.git work
+check "agentdb: personal repo uses the personal database" agentdb_db "$home" "$tmp/a/2" git@github.com:someone/repo.git personal
+check "agentdb: a folder outside git is personal" agentdb_db "$home" "$tmp/a/3" "" personal
+check "agentdb: a work folder outside git is work" agentdb_db "$home" "$tmp/clients b/acme/notes" "" work
+check "agentdb: a repo inside a work folder is work" agentdb_db "$home" "$tmp/work/scratch" git@github.com:someone/x.git work
+check "agentdb: a folder that only starts like a work folder is personal" agentdb_db "$home" "$tmp/workshop" "" personal
+check "agentdb: no work identity, always personal" agentdb_db "$home2" "$tmp/a/4" git@github.com:other-org/repo.git personal
 check "git: org typed Example-Org matches its URL casing" identity "$home" \
   git@github.com:Example-Org/repo.git work@example.com "~/.ssh/id_ed25519_work.pub" \
   git@git-work:Example-Org/repo.git

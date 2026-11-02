@@ -4,9 +4,17 @@
 {{- $workEmail := promptStringOnce . "workEmail" "Work git email (leave blank if this machine has no work identity)" -}}
 {{- $workHost := "" -}}
 {{- $workOrgs := "" -}}
+{{- $workFolders := "" -}}
 {{- if $workEmail -}}
 {{-   $workHost = promptStringOnce . "workHost" "Work git host such as gitlab.com or git.example.com" -}}
 {{-   $workOrgs = promptStringOnce . "workOrgs" "Work orgs or groups exactly as in repo URLs (space-separated; blank if every repo on that host is work)" -}}
+{{-   $workFolders = promptStringOnce . "workFolders" "Folders for Claude's work memory in or outside git (separated by semicolons; blank for none)" -}}
+{{-   $folders := list -}}
+{{-   range splitList ";" $workFolders -}}
+{{-     $f := trim . | trimSuffix "/" -}}
+{{-     if $f -}}{{ $folders = append $folders (regexReplaceAll "^~" $f $.chezmoi.homeDir) }}{{ end -}}
+{{-   end -}}
+{{-   $workFolders = join ";" $folders -}}
 {{-   if not $workHost -}}
 {{-     fail "A work email needs a work git host." -}}
 {{-   end -}}
@@ -30,6 +38,7 @@ sourceDir = {{ .chezmoi.sourceDir | quote }}
   workEmail = {{ $workEmail | quote }}
   workHost = {{ $workHost | quote }}
   workOrgs = {{ $workOrgs | quote }}
+  workFolders = {{ $workFolders | quote }}
   obsidianVault = {{ $obsidianVault | quote }}
   obsidianPrivate = {{ $obsidianPrivate | quote }}
 
