@@ -132,7 +132,8 @@ claude_merge() { # managed Claude settings merge over a live file and keep its k
 obsidian_settings() {
   jq -e --arg v "$vault" '.permissions.additionalDirectories == [$v]
     and (.permissions.deny | index("Read(/\($v)/Team Stuff/**)") != null)
-    and (.permissions.deny | index("Edit(/\($v)/Private/HR/**)") != null)' \
+    and (.permissions.deny | index("Edit(/\($v)/Private/HR/**)") != null)
+    and ([[.hooks.SessionStart, .hooks.UserPromptSubmit][][0].hooks[0].command | endswith("/journal-check")] | all)' \
     "$home/.config/claude/settings.json" >/dev/null ||
     { jq .permissions "$home/.config/claude/settings.json"; return 1; }
 }
@@ -205,6 +206,13 @@ journal_check() { # offers today's agenda and the last weekday's missing summari
   [[ -z $(run /somewhere) ]] || { echo "asked twice"; return 1; }
   rm -rf "$st"
   [[ -z $(run "$st/cradle/journal") ]] || { echo "asked in the evening run"; return 1; }
+  rm -rf "$st"
+  out=$(echo '{"hook_event_name":"UserPromptSubmit","cwd":"/x"}' | XDG_STATE_HOME=$st "$hook")
+  jq -e '.hookSpecificOutput | .hookEventName == "UserPromptSubmit"
+    and (.additionalContext | contains("after handling"))' <<<"$out" >/dev/null ||
+    { echo "no offer on a prompt: $out"; return 1; }
+  [[ -z $(echo '{"hook_event_name":"UserPromptSubmit"}' | XDG_STATE_HOME=$st "$hook") ]] ||
+    { echo "asked again on the next prompt"; return 1; }
 }
 journal_data() { # sessions and commits from today only, without the evening run's own
   local j=$tmp/journal today now yesterday out
