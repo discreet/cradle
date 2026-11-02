@@ -2,11 +2,14 @@
 #!/usr/bin/env bash
 # Applies obsidian/ from this repo to the vault: the Daily notes and Templates
 # settings are merged into Obsidian's own files (other settings changed in
-# Obsidian stay), and the daily note template is written. Re-runs when they
-# change; Obsidian reads its settings when it next opens the vault.
+# Obsidian stay), and the templates (daily note, meeting) are written.
+# Re-runs when they change; Obsidian reads its settings when it next opens the
+# vault.
 # daily-notes.json: {{ include "obsidian/daily-notes.json" | sha256sum }}
 # templates.json: {{ include "obsidian/templates.json" | sha256sum }}
-# Templates/Daily.md: {{ include "obsidian/Templates/Daily.md" | sha256sum }}
+{{- range glob (joinPath .chezmoi.sourceDir "obsidian/Templates/*.md") }}
+# Templates/{{ base . }}: {{ include . | sha256sum }}
+{{- end }}
 set -euo pipefail
 
 vault={{ .obsidianVault | quote }}
@@ -23,5 +26,5 @@ for f in daily-notes.json templates.json; do
   mv "$live.new" "$live"
 done
 mkdir -p "$vault/Templates" "$vault/$(jq -r .folder "$src/daily-notes.json")"
-cp "$src/Templates/Daily.md" "$vault/Templates/Daily.md"
+cp "$src"/Templates/*.md "$vault/Templates/"
 {{ end -}}

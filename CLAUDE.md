@@ -173,8 +173,14 @@ are listed so they aren't proposed again without a reason.
   attached meeting notes) and Slack conversations go in `## Meetings` and
   `## Slack` via the claude.ai connectors; headless `claude -p` doesn't load
   connectors (tested, 2.1.314), so a SessionStart hook (`journal-check`) has
-  the next interactive session offer to fill whichever is empty (chosen over
-  on-demand only and local MCP servers with tokens). Daily notes are managed from `obsidian/`: `Daily/YYYY-MM-DD.md`,
+  the next interactive session offer to fill whichever is missing (chosen
+  over on-demand only and local MCP servers with tokens). The user takes
+  their own meeting notes in `## Meetings` under `### HH:MM` headings, from
+  `/journal agenda` (offered by the same hook on weekday mornings; run by
+  hand in a session left open overnight) or `Templates/Meeting.md`; the
+  journal matches them to events by time and never edits the user's text
+  (chosen over AI note-takers, attached notes docs and one note per
+  meeting). Section markers `%% agenda %%`/`%% journal %%` record progress. Daily notes are managed from `obsidian/`: `Daily/YYYY-MM-DD.md`,
   from `Templates/Daily.md`, which the repo overwrites (the user chose a
   managed template over a create-once one). Shell history was left out on purpose; per-session summaries and
   an on-demand-only journal were declined.
