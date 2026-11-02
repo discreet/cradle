@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Registers Claude Code's user-scope MCP servers. Claude Code keeps them in its
+# own state file (~/.config/claude/.claude.json), so they're added with
+# `claude mcp` rather than written as a file. Re-runs when this script changes.
+set -euo pipefail
+
+eval "$(/opt/homebrew/bin/brew shellenv)"
+export CLAUDE_CONFIG_DIR="$HOME/.config/claude"
+
+# add <name> <json>: replaces the server if it's already there.
+add() {
+  mise exec -- claude mcp remove --scope user "$1" >/dev/null 2>&1 || true
+  mise exec -- claude mcp add-json --scope user "$1" "$2" >/dev/null
+}
+
+# agentdb (npm:agentdb in mise): vector memory, with separate work and personal
+# databases picked by ~/.local/bin/agentdb-mcp.
+add agentdb '{"type": "stdio", "command": {{ joinPath .chezmoi.homeDir ".local/bin/agentdb-mcp" | toJson }}}'
