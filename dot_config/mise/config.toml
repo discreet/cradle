@@ -1,5 +1,15 @@
 # Global tool versions. Pin exact versions per project with a mise.toml in the
 # repo (`mise use kubectl@1.34`); these are only the defaults.
+[settings]
+# `latest` skips releases younger than a week, so a bad or malicious release
+# is usually pulled before it lands here. One-off override for something
+# urgent: MISE_MINIMUM_RELEASE_AGE=0 mise upgrade <tool>. (mise already
+# checks GitHub's checksum, attestations and SLSA provenance by default.)
+minimum_release_age = "7d"
+# agentdb's whole 3.x line is newer than a week; the delay would fall back to
+# 1.6.1. Drop this once 3.x is older than the delay.
+minimum_release_age_excludes = ["npm:agentdb"]
+
 [env]
 # Go's module cache and build cache live here instead of ~/go. Set in mise so
 # it also applies to mise's own `go:` installs (gopls, goimports).

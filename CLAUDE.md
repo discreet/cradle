@@ -179,6 +179,15 @@ are listed so they aren't proposed again without a reason.
   an on-demand-only journal were declined.
 - **Downloads from other repos** are pinned to a commit and updated by hand
   after reading what changed.
+- **mise waits a week for new releases** (`minimum_release_age = "7d"`):
+  `latest` skips anything younger, against bad or malicious releases. Chosen
+  2026-11-02 after checking verification: mise already checks checksums,
+  GitHub attestations and SLSA provenance by default, but the `github:` tools
+  here publish only a checksum. Exceptions go in
+  `minimum_release_age_excludes` with a reason (agentdb, until its 3.x line is
+  a week old); a one-off urgent upgrade uses `MISE_MINIMUM_RELEASE_AGE=0`.
+  Switching buildx to `aqua:` was rejected: aqua names the binary so Docker
+  can't find it, and it gains nothing over the checksum.
 - **No links to or names of the old repos** this setup replaced, anywhere in
   the repo; the "What changed" table describes them only as the old setup.
 
@@ -201,7 +210,9 @@ from the live machine:
 
 When the user asks to update, do these in order and report what changed:
 
-1. **Tools:** `mise outdated`, then `mise upgrade`. This covers Claude Code and
+1. **Tools:** `mise outdated`, then `mise upgrade` (versions under a week old
+   are skipped; see Decisions). Drop any `minimum_release_age_excludes` entry
+   whose reason no longer holds. This covers Claude Code and
    the language servers. Then regenerate bash completions for the new
    versions (chezmoi only reruns that script when mise's config changes):
    `chezmoi execute-template <"$(chezmoi source-path)/run_onchange_after_25-completions.sh.tmpl" | bash`.

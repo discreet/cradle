@@ -6,7 +6,8 @@ Configuration for an Apple Silicon Mac, built on three tools:
   per-machine values (name, email, signing key) through templates.
 - [mise](https://mise.jdx.dev) installs every command-line tool: languages,
   Neovim, tmux, kubectl, Claude Code and the rest
-  ([config](dot_config/mise/config.toml)).
+  ([config](dot_config/mise/config.toml)). New releases wait a week before
+  mise installs them, so a bad release is usually pulled first.
 - A [Brewfile](Brewfile) covers only what mise can't: bash (the login shell),
   bash-completion, mise itself, and GUI apps. git is Apple's, from the Command
   Line Tools.
@@ -69,7 +70,7 @@ The commands behind what Claude does, for reference:
 | Pull and apply updates | `chezmoi update` |
 | Add a CLI tool | add it to `dot_config/mise/config.toml` (`mise registry <name>` to check it's there), then `chezmoi apply` |
 | Add an app | add a `cask` to `Brewfile`, then `chezmoi apply` |
-| Update tools | `mise upgrade` (tools set to `latest`), then regenerate completions: `chezmoi execute-template <"$(chezmoi source-path)/run_onchange_after_25-completions.sh.tmpl" \| bash`; `brew upgrade` for apps |
+| Update tools | `mise upgrade` (tools set to `latest`; releases under a week old are skipped, `MISE_MINIMUM_RELEASE_AGE=0 mise upgrade <tool>` takes one anyway), then regenerate completions: `chezmoi execute-template <"$(chezmoi source-path)/run_onchange_after_25-completions.sh.tmpl" \| bash`; `brew upgrade` for apps |
 | Change a tool version | edit `dot_config/mise/config.toml`, then `chezmoi apply` |
 | Pin a version for a project | `mise use kubectl@1.34` inside the project |
 | Update Neovim plugins | `:Lazy update` in Neovim, then `chezmoi re-add ~/.config/nvim/lazy-lock.json` (the lock file pins every machine to the same versions) |
