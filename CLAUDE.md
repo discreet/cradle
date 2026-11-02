@@ -192,9 +192,14 @@ are listed so they aren't proposed again without a reason.
   journal. A local Google MCP server, Workspace APIs with an OAuth client,
   `gcloud`, and the Google Drive desktop app were not chosen.
 - **Jira:** tickets are created through the claude.ai Atlassian connector
-  (needs write access granted on the connector), with no skill or defaults
-  in this repo for now. A skill with per-machine defaults (project, issue
-  type) can be added if the user files tickets often enough.
+  (needs write access granted on it) with the `jira-ticket` skill. Stories,
+  Epics and Spikes follow `skills/jira-ticket/standards.md`: net-new
+  standards from well-known practice (Connextra user stories, INVEST,
+  Given/When/Then, outcome epics, timeboxed spikes), deliberately not
+  modelled on the existing Jira. Spike is its own issue type; a project
+  without it is a stop, not a fallback to Task or Story. The project must be
+  named every time for now; a per-machine default project (a chezmoi
+  question, since keys are work details) may replace that later.
 - **claude.ai connectors** are the default for anything that talks to a
   hosted service the user already signs in to, over local MCP servers with
   tokens. README's "claude.ai connectors" table lists every connector and

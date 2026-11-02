@@ -142,6 +142,7 @@ Alternatives considered and not set up, in case they're wanted later:
 | `dot_local/bin/executable_agentdb-mcp.tmpl` | `~/.local/bin/agentdb-mcp`: starts agentdb's MCP server on the work or personal database (see Claude Code) |
 | `dot_local/bin/executable_tmux-pick` | `~/.local/bin/tmux-pick`: lists tmux sessions, most recent first, to attach to or start a new one; starts one straight away if there are none. Esc or leaving tmux drops to a plain shell |
 | `dot_config/claude/`, `.chezmoitemplates/claude-settings.json` | Claude Code (see below) |
+| `dot_config/claude/skills/jira-ticket/` | The `jira-ticket` skill and `standards.md`, the standards every Story, Epic and Spike follows (see Jira tickets) |
 | `.chezmoiexternal.toml` | Files downloaded from other repos, pinned to a commit (Claude Code skills) |
 | `private_Library/LaunchAgents/` | At login: starts Colima (Docker), loads SSH keys from the keychain into ssh-agent (git signs commits through it) and makes Caps Lock a Control key. Every evening: the Obsidian journal |
 | `run_onchange_*` | Re-run `brew bundle`, `mise install` and completion generation when their inputs change, reload the LaunchAgents, register Claude Code's MCP servers, and turn off macOS's `⌃Space` shortcut |
@@ -190,7 +191,29 @@ know:
 | Google Drive | read and write | Searching Drive from Claude, and meeting notes docs attached to calendar events, which the journal reads. Write access lets Claude create files. |
 | Google Docs | read and write | Creating and editing Docs from Claude. |
 | Google Sheets | read and write | Creating and editing Sheets from Claude. |
-| Atlassian | read and write (Jira) | Creating Jira tickets from Claude. Read access alone only lets it search and read issues. |
+| Atlassian | read and write (Jira) | Creating Jira tickets from Claude with the `jira-ticket` skill (Stories, Epics and Spikes to a set standard). Read access alone only lets it search and read issues; the skill then hands you the draft to paste. |
+
+## Jira tickets
+
+Ask Claude to create a story, epic or spike ("file a story in PROJ for…") and
+the `jira-ticket` skill drafts it to the standards in
+[`standards.md`](dot_config/claude/skills/jira-ticket/standards.md):
+
+- **Story:** a verb-first summary, a user story (`As a… I want… so that…`)
+  and Given/When/Then acceptance criteria, checked against INVEST; a story
+  too big for a sprint gets split or becomes an epic.
+- **Epic:** an outcome with the problem, success measures, scope in and out,
+  acceptance criteria, risks and a breakdown into stories and spikes.
+- **Spike:** `Spike: <question>`, why it matters now, a timebox of at most a
+  sprint, the approach, and an output that's a decision plus follow-up
+  stories.
+
+You must name the project; Claude never picks one. If the project has no
+issue type for what you asked (some have no Spike), it stops rather than
+filing it as something else. It asks for what the standard needs and you
+didn't say, shows the full draft, and creates it only after your OK, through
+the Atlassian connector (see claude.ai connectors). Change the standards in
+`standards.md`, here in the repo.
 
 ## Obsidian
 
