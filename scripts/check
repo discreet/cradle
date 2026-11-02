@@ -163,36 +163,45 @@ obsidian_apply() { # merges into existing settings, writes the template; nothing
     "$vault/.obsidian/daily-notes.json" >/dev/null || { cat "$vault/.obsidian/daily-notes.json"; return 1; }
   jq -e '.folder == "Templates"' "$vault/.obsidian/templates.json" >/dev/null || return 1
   cmp "$repo/obsidian/Templates/Daily.md" "$vault/Templates/Daily.md" || return 1
+  cmp "$repo/obsidian/Templates/Meeting.md" "$vault/Templates/Meeting.md" || return 1
   [[ -d $vault/Daily ]] || { echo "no Daily folder"; return 1; }
   [[ -z $(czh home-personal execute-template <"$repo/run_onchange_after_35-obsidian.sh.tmpl" | tr -d '[:space:]') ]] ||
     { echo "the script isn't empty without a vault"; return 1; }
 }
-journal_check() { # offers once to fill empty Meetings/Slack sections, else stays quiet
-  local hook=$home/.local/bin/journal-check st=$tmp/journal-state day note out
+journal_check() { # offers today's agenda and the last weekday's missing summaries, once each
+  local hook=$home/.local/bin/journal-check st=$tmp/journal-state day today note old out weekday=""
+  today=$(date +%F)
+  (($(date +%u) <= 5)) && weekday=1
   day=$(date -v-1d +%F)
   while (($(date -j -f %F "$day" +%u) > 5)); do day=$(date -j -v-1d -f %F "$day" +%F); done
   mkdir -p "$vault/.obsidian" "$vault/Daily"
   echo '{"folder":"Daily"}' >"$vault/.obsidian/daily-notes.json"
-  note=$vault/Daily/$day.md
+  note=$vault/Daily/$today.md old=$vault/Daily/$day.md
+  rm -f "$note" "$old"
   run() { echo "{\"cwd\":\"$1\"}" | XDG_STATE_HOME=$st "$hook"; }
-  offers() { # offers <sections wanted in the offer> <sections not wanted>
-    out=$(run /somewhere) || return 1
-    jq -e --arg d "$day" --arg in "$1" --arg out "$2" '.hookSpecificOutput.additionalContext as $c
-      | ($c | contains($d)) and all($in | splits(" "); . as $s | $c | contains($s))
-      and all($out | splits(" ") | select(. != ""); . as $s | $c | contains($s) | not)' <<<"$out" >/dev/null ||
-      { echo "wanted an offer for '$1' (not '$2'): $out"; return 1; }
+  says() { # says <text that must be in the offer>... ; then -- <text that must not>...
+    local c
+    c=$(run /somewhere | jq -r .hookSpecificOutput.additionalContext) || return 1
+    while (($#)) && [[ $1 != -- ]]; do [[ $c == *"$1"* ]] || { echo "missing '$1': $c"; return 1; }; shift; done
+    shift || true
+    while (($#)); do [[ $c != *"$1"* ]] || { echo "shouldn't say '$1': $c"; return 1; }; shift; done
     rm -rf "$st"
   }
-  printf '## Meetings\n\n## Terminal\n- did things\n\n## Slack\n\n' >"$note"
-  offers "Meetings Slack" "" || return 1
-  printf '## Meetings\n- 10:00 Standup\n\n## Terminal\n\n## Slack  \n' >"$note"
-  offers "Slack" "Meetings" || return 1
-  rm -f "$note"
-  offers "Meetings Slack" "" || return 1
-  printf '## Meetings\n- Nothing.\n\n## Slack\n- #team: agreed on X\n' >"$note"
-  [[ -z $(run /somewhere) ]] || { echo "asked although both are filled in"; return 1; }
-  printf '## Slack\n' >"$note"
-  [[ -n $(run /somewhere) ]] || { echo "no offer for an empty Slack section"; return 1; }
+  printf '## Meetings\n\n## Terminal\n- did things\n\n## Slack\n\n' >"$old"
+  if [[ -n $weekday ]]; then
+    says "/journal agenda" "$today" "Meetings and Slack summary" "$day" || return 1
+    printf '## Meetings\n### 09:00 Standup\n%%%% agenda %%%%\n' >"$note"
+  fi
+  says "Meetings and Slack summary" -- "/journal agenda" || return 1
+  printf '## Meetings\n### 10:00 Sync\n- my notes\n\n## Slack  \n- #team: agreed on X\n' >"$old"
+  says "Meetings summary" -- "Slack" || return 1
+  printf '## Meetings\n### 10:00 Sync\n%%%% journal %%%%\n\n## Slack\n\n' >"$old"
+  says "Slack summary" -- "Meetings" || return 1
+  printf '## Meetings\n- Nothing.\n%%%% journal %%%%\n## Slack\n- Nothing.\n' >"$old"
+  [[ -z $(run /somewhere) ]] || { echo "asked although everything is filled in"; return 1; }
+  rm -rf "$st"; rm -f "$note"
+  printf '## Slack\n' >"$old"
+  [[ -n $(run /somewhere) ]] || { echo "no offer"; return 1; }
   [[ -z $(run /somewhere) ]] || { echo "asked twice"; return 1; }
   rm -rf "$st"
   [[ -z $(run "$st/cradle/journal") ]] || { echo "asked in the evening run"; return 1; }
@@ -387,7 +396,7 @@ check "Obsidian: global instructions name the vault and private folders" obsidia
 check "Obsidian: nothing installed without a vault" no_obsidian
 check "Obsidian: Daily notes settings and template applied to the vault" obsidian_apply
 check "Obsidian: journal-data finds the day's sessions and commits" journal_data
-check "Obsidian: sessions offer once to fill empty Meetings and Slack sections" journal_check
+check "Obsidian: sessions offer today's agenda and missing summaries, once each" journal_check
 check "JSON settings parse" jq empty "$repo"/obsidian/*.json "$home/.config/claude/settings.json" \
   "$home/.docker/config.json" "$repo/.claude/settings.json"
 

@@ -178,14 +178,24 @@ directly as files, with no plugin or MCP server:
   repo; chezmoi asks for them on each machine.
 - Daily notes are configured from `obsidian/` in this repo: they live in
   `Daily/` as `YYYY-MM-DD.md` and start from `Templates/Daily.md` (a `date`
-  property and `## Notes`, `## Meetings`, `## Terminal`, `## Slack`). A `run_onchange` script merges the
+  property and `## Notes`, `## Meetings`, `## Terminal`, `## Slack`).
+  `Templates/Meeting.md` starts a meeting's notes: `### HH:MM` with the
+  current time. Give "Templates: Insert template" a hotkey in Obsidian
+  (Settings → Hotkeys), then it's the hotkey, "Mee", Enter. A `run_onchange` script merges the
   settings into the vault's `.obsidian/` files, keeping anything else set in
   Obsidian, and writes the template; edit them here, not in Obsidian, since
   the next apply overwrites the template. Obsidian picks up the settings when
   it next opens the vault.
+- **Meeting notes during the day:** `/journal agenda` (or "add today's
+  meetings") puts today's Google Calendar events into `## Meetings` as
+  `### 10:00 Title (with who)` headings; type your notes under them, or start
+  one with the Meeting template for a meeting that isn't there. Running it
+  again adds only new events. On weekdays, the first Claude session of the
+  day offers it; in a session left open overnight, run it yourself.
 - `/journal [YYYY-MM-DD]` writes that day's daily note sections:
-  `## Meetings` (that day's Google Calendar events, with decisions and your
-  action items from any attached meeting notes, such as Gemini's),
+  `## Meetings` (that day's Google Calendar events matched to your notes by
+  time, your notes kept as written, plus a short summary under each and your
+  action items at the top; attached notes docs are read too),
   `## Terminal` (what you did in each Claude Code session, grouped by project,
   and your commits) and `## Slack` (conversations you took part in, were
   mentioned in or were sent as DMs, leading with what's waiting on you). It
@@ -197,8 +207,10 @@ directly as files, with no plugin or MCP server:
   `~/Library/Logs/obsidian-journal.log`. That run is headless, and headless
   Claude Code doesn't load claude.ai connectors, so it can't reach Calendar
   or Slack. Instead, a `SessionStart` hook (`journal-check`) checks the last
-  weekday's note when you start Claude; if its `## Meetings` or `## Slack`
-  section is empty, Claude offers once to fill them.
+  weekday's note when you start Claude; if its Meetings section isn't
+  summarised yet (marked `%% journal %%`, hidden in reading view) or its
+  Slack section is empty, Claude offers once to fill them. The same hook
+  offers today's agenda.
 - `journal-data [YYYY-MM-DD]` prints what the summary is built from: your
   prompts and Claude's replies (shortened) and your commits in git repos up to
   four folders below home. Shell history is not used.

@@ -12,7 +12,8 @@
 {{- /*
   The Obsidian vault is a working folder in every session; Claude's file
   tools can't read or edit the folders named as private; and each session
-  starts by checking for missing Meetings or Slack summaries (journal-check).
+  starts by checking for today's agenda and missing Meetings or Slack
+  summaries (journal-check).
 */ -}}
 {{- if .obsidianVault -}}
 {{-   $_ := set $managed.permissions "additionalDirectories" (list .obsidianVault) -}}
