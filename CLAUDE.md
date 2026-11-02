@@ -172,12 +172,12 @@ are listed so they aren't proposed again without a reason.
   at 18:00. Meetings (Google Calendar, plus decisions and action items from
   attached meeting notes) and Slack conversations go in `## Meetings` and
   `## Slack` via the claude.ai connectors; headless `claude -p` doesn't load
-  connectors (tested, 2.1.314), so a SessionStart hook (`journal-check`) has
-  the next interactive session offer to fill whichever is missing (chosen
+  connectors (tested, 2.1.314), so a hook (`journal-check`, on SessionStart
+  and UserPromptSubmit, once a day) has the next interactive session offer to fill whichever is missing (chosen
   over on-demand only and local MCP servers with tokens). The user takes
   their own meeting notes in `## Meetings` under `### HH:MM` headings, from
-  `/journal agenda` (offered by the same hook on weekday mornings; run by
-  hand in a session left open overnight) or `Templates/Meeting.md`; the
+  `/journal agenda` (offered by the same hook each weekday, including in a
+  session left open overnight) or `Templates/Meeting.md`; the
   journal matches them to events by time and never edits the user's text
   (chosen over AI note-takers, attached notes docs and one note per
   meeting). Section markers `%% agenda %%`/`%% journal %%` record progress. Daily notes are managed from `obsidian/`: `Daily/YYYY-MM-DD.md`,

@@ -190,8 +190,9 @@ directly as files, with no plugin or MCP server:
   meetings") puts today's Google Calendar events into `## Meetings` as
   `### 10:00 Title (with who)` headings; type your notes under them, or start
   one with the Meeting template for a meeting that isn't there. Running it
-  again adds only new events. On weekdays, the first Claude session of the
-  day offers it; in a session left open overnight, run it yourself.
+  again adds only new events. On weekdays, Claude offers it once a day: when
+  you start it, or at your first message of the day in a session left open
+  overnight.
 - `/journal [YYYY-MM-DD]` writes that day's daily note sections:
   `## Meetings` (that day's Google Calendar events matched to your notes by
   time, your notes kept as written, plus a short summary under each and your
@@ -206,8 +207,8 @@ directly as files, with no plugin or MCP server:
   asleep), only if there were sessions or commits that day. Log:
   `~/Library/Logs/obsidian-journal.log`. That run is headless, and headless
   Claude Code doesn't load claude.ai connectors, so it can't reach Calendar
-  or Slack. Instead, a `SessionStart` hook (`journal-check`) checks the last
-  weekday's note when you start Claude; if its Meetings section isn't
+  or Slack. Instead, a hook (`journal-check`, run when Claude starts and on
+  each message, checking once a day) looks at the last weekday's note; if its Meetings section isn't
   summarised yet (marked `%% journal %%`, hidden in reading view) or its
   Slack section is empty, Claude offers once to fill them. The same hook
   offers today's agenda.

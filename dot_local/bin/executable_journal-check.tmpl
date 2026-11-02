@@ -1,18 +1,29 @@
 #!/usr/bin/env bash
-# Claude Code SessionStart hook for the Obsidian journal. Asks Claude to offer,
-# once each:
+# Claude Code hook for the Obsidian journal, run at SessionStart and on every
+# prompt (UserPromptSubmit), so a session left open overnight gets the next
+# morning's offer too. Asks Claude to offer, once each:
 # - on a weekday, to add today's meetings to today's daily note (as headings
 #   to take notes under), if they aren't there yet;
 # - to fill the last weekday's Meetings or Slack summary, if missing. Those
 #   come from claude.ai connectors (Google Calendar, Slack), which headless
 #   runs like the evening journal can't use.
-# The evening run itself is left alone. In a session left open overnight, the
-# user runs `/journal agenda` instead.
+# Each day is checked once, so later prompts return after two file tests. The
+# evening run itself is left alone.
 set -euo pipefail
 
 vault={{ .obsidianVault | quote }}
 state="${XDG_STATE_HOME:-$HOME/.local/state}/cradle/journal"
-[[ $(jq -r '.cwd // empty' 2>/dev/null) != "$state" ]] || exit 0
+read -r today weekday < <(date '+%F %u')
+back=1 # to the last weekday: Monday -> Friday, Sunday -> Friday
+((weekday == 1)) && back=3
+((weekday == 7)) && back=2
+day=$(date -v-${back}d +%F)
+agenda=""
+((weekday <= 5)) && [[ ! -e $state/agenda-checked-$today ]] && agenda=1
+[[ -n $agenda || ! -e $state/checked-$day ]] || exit 0
+
+IFS=$'\t' read -r event cwd < <(jq -r '[.hook_event_name // "SessionStart", .cwd // ""] | @tsv')
+[[ $cwd != "$state" ]] || exit 0
 
 folder=$(jq -r '.folder // ""' "$vault/.obsidian/daily-notes.json" 2>/dev/null || true)
 note() { echo "$vault/${folder:+$folder/}$1.md"; }
@@ -25,28 +36,24 @@ has() {
 offers=()
 mkdir -p "$state"
 
-today=$(date +%F)
-if (($(date +%u) <= 5)) && [[ ! -e $state/agenda-asked-$today ]] &&
-  ! has "$(note "$today")" Meetings '%% (agenda|journal) %%'; then
-  touch "$state/agenda-asked-$today"
-  offers+=("to add today's meetings ($today) to the daily note with /journal agenda, so the user can take notes under them")
+if [[ -n $agenda ]]; then
+  touch "$state/agenda-checked-$today"
+  has "$(note "$today")" Meetings '%% (agenda|journal) %%' ||
+    offers+=("to add today's meetings ($today) to the daily note with /journal agenda, so the user can take notes under them")
 fi
-
-day=$(date -v-1d +%F)
-while (($(date -j -f %F "$day" +%u) > 5)); do
-  day=$(date -j -v-1d -f %F "$day" +%F)
-done
-if [[ ! -e $state/asked-$day ]]; then
+if [[ ! -e $state/checked-$day ]]; then
+  touch "$state/checked-$day"
   missing=()
   has "$(note "$day")" Meetings '%% journal %%' || missing+=(Meetings)
   has "$(note "$day")" Slack '[^[:space:]]' || missing+=(Slack)
   if ((${#missing[@]})); then
-    touch "$state/asked-$day"
     what=${missing[*]}
     offers+=("to add the ${what/ / and } summary to the daily note for $day with the journal skill (the evening run cannot reach claude.ai connectors)")
   fi
 fi
 
 ((${#offers[@]})) || exit 0
-jq -n --args '{hookSpecificOutput: {hookEventName: "SessionStart",
-  additionalContext: ("Obsidian journal: in your first reply, briefly offer once each: " + ($ARGS.positional | join("; ")) + ". Only run what the user agrees to.")}}' "${offers[@]}"
+when="in your first reply"
+[[ $event == SessionStart ]] || when="after handling the user's message"
+jq -n --arg event "$event" --arg when "$when" --args '{hookSpecificOutput: {hookEventName: $event,
+  additionalContext: ("Obsidian journal: \($when), briefly offer once each: " + ($ARGS.positional | join("; ")) + ". Only run what the user agrees to.")}}' "${offers[@]}"
