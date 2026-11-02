@@ -154,7 +154,14 @@ are listed so they aren't proposed again without a reason.
   (`~/.local/bin/agentdb-mcp`). A session is work when git's identity in its
   folder is work or the folder is under a work folder (`workFolders`, asked
   per machine with a work identity); anything else is personal. One shared
-  database, one per project and marker files were rejected.
+  database, one per project and marker files were rejected. Claude uses it
+  because the global instructions (`dot_config/claude/CLAUDE.md.tmpl`) say
+  to: `reflexion_retrieve` before real tasks, `reflexion_store` after.
+  Possible later step, if Claude skips that too often: Claude Code hooks that
+  recall at `SessionStart` and store at `Stop`. Hooks can't call MCP tools,
+  so they'd run the `agentdb` CLI on the same database (reuse
+  `agentdb-mcp`'s work/personal choice); first check the CLI covers recall
+  and store.
 - **Obsidian:** Claude uses the vault as plain files (an extra working
   folder), not through an MCP server or plugin. Each machine is asked for the
   vault path and folders Claude must not read (denied to its file tools,

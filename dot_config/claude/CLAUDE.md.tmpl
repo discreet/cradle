@@ -10,6 +10,25 @@ Don't edit the managed files in `~` directly, and don't install tools
 globally with `brew install`, `npm install -g`, `pip install`, `uv tool
 install` or `go install`; they belong in the repo's mise config or Brewfile.
 Project dependencies inside a project are fine.
+
+# Memory (agentdb)
+
+The `agentdb` MCP server is a memory of past work that lasts between
+sessions. It already keeps work and personal apart by the folder Claude
+started in, so never pick or mention a database.
+
+- Before starting a task that takes real work (a bug, a feature, a change
+  across files, an investigation), call `reflexion_retrieve` with a one-line
+  description of the task. Use what's relevant; ignore what isn't.
+- When such a task ends, whether it worked or not, call `reflexion_store`:
+  `session_id` as `<folder name>-<YYYY-MM-DD>`, `task` in one line, `success`,
+  `reward` from 0 to 1, and a `critique` of a few sentences: what worked, what
+  didn't, what to do differently next time.
+- Store only lessons. Never store secrets, tokens, credentials, personal
+  details, or anything from folders Claude must not read.
+- Skip both for quick questions, lookups and one-line edits, and in
+  scheduled headless runs such as the journal. If agentdb isn't connected,
+  carry on without it.
 {{- if .obsidianVault }}
 
 # Obsidian
