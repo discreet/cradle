@@ -163,8 +163,34 @@ it runs `claude`: in a shell, through its shims (the evening journal) or with
 | Skills from GitHub | Add an entry to `.chezmoiexternal.toml`, pinned to a commit, with a link to the skill's history so updates can be checked by hand. Your own skills go in `dot_config/claude/skills/<name>/SKILL.md`. |
 | MCP servers (user scope) | Claude Code stores these in its own state file, so they're registered by `run_onchange_after_45-claude-mcp.sh.tmpl`: add an `add <name> '<json>'` line there and the server's tool to mise. It replaces a server of the same name; removing a line doesn't unregister it (`claude mcp remove --scope user <name>`). |
 | MCP server: agentdb | [AgentDB](https://github.com/ruvnet/agentdb) (`npm:agentdb` in mise), vector memory with reflexion, skills and a causal graph as MCP tools. Work and personal memories are separate databases in `~/.local/share/agentdb/`: `~/.local/bin/agentdb-mcp` starts the server in the session's folder and uses `work.db` when git's identity there is the work one (the same remote rules as commits) or the folder is inside one of the work folders chezmoi asked for (in git or not), otherwise `personal.db`. Without a work identity everything is personal. To change the work folders, edit `workFolders` (full paths, `;` between them) in `~/.config/chezmoi/chezmoi.toml` and `chezmoi apply`. The global instructions tell Claude to search it before real tasks and store what it learned after (`reflexion_retrieve`, `reflexion_store`); nothing is stored automatically. A session keeps the database it started with, so start Claude in the repo, not in a parent folder of work and personal repos. `/mcp` in Claude Code shows whether it's connected. |
-| claude.ai connectors | Connected once in your claude.ai account (Settings → Connectors), not in this repo, and available in every session on every machine: Slack and Google Calendar for the journal; Google Drive, Docs and Sheets to search Drive and create or edit Docs and Sheets from Claude. They belong to the claude.ai account, so they don't follow the work/personal split: every session sees the same Google account. |
-| Not managed | `.claude.json` (sign-in, per-project state), history, sessions, the plugin cache, and anything synced from your claude.ai account (connectors, synced skills). |
+| Not managed | `.claude.json` (sign-in, per-project state), history, sessions, the plugin cache, and anything synced from your claude.ai account (connectors, synced skills; see [claude.ai connectors](#claudeai-connectors)). |
+
+## claude.ai connectors
+
+Some of this setup only works through connectors in your claude.ai account.
+They're connected there (claude.ai → Settings → Connectors), not by this repo,
+so a new machine gets them as soon as you sign in to Claude Code with that
+account; a missing connector only turns its feature off. Three things to
+know:
+
+- Claude Code loads them only in interactive sessions. Headless runs
+  (`claude -p`, like the evening journal) can't use them, which is why the
+  journal fills its connector sections in the next session you open.
+- They belong to the claude.ai account, not to a folder, so they don't follow
+  the work/personal split: every session, in any repo, sees the same Google,
+  Slack and Atlassian accounts.
+- What a connector may do (read only, or also write) is set when you connect
+  it, and may be limited by a claude.ai organisation admin or by the service's
+  own admin.
+
+| Connector | Access needed | What in cradle depends on it |
+|---|---|---|
+| Slack | read | The journal's `## Slack` section (conversations you were in, mentions, DMs). |
+| Google Calendar | read | The journal's `## Meetings` section and `/journal agenda` (today's meetings as headings to take notes under), and the start-of-session offer for both. |
+| Google Drive | read and write | Searching Drive from Claude, and meeting notes docs attached to calendar events, which the journal reads. Write access lets Claude create files. |
+| Google Docs | read and write | Creating and editing Docs from Claude. |
+| Google Sheets | read and write | Creating and editing Sheets from Claude. |
+| Atlassian | read and write (Jira) | Creating Jira tickets from Claude. Read access alone only lets it search and read issues. |
 
 ## Obsidian
 
@@ -200,9 +226,10 @@ directly as files, with no plugin or MCP server:
   `## Terminal` (what you did in each Claude Code session, grouped by project,
   and your commits) and `## Slack` (conversations you took part in, were
   mentioned in or were sent as DMs, leading with what's waiting on you). It
-  creates the note from the template if needed, and only ever replaces its
-  own sections. Meetings and Slack come from claude.ai connectors (see Claude
-  Code); a source with nothing that day gets `- Nothing.`
+  creates the note from the template if needed and replaces only its own
+  sections, except Meetings, where it merges and keeps your notes. Meetings
+  and Slack come from [claude.ai connectors](#claudeai-connectors); a source
+  with nothing that day gets `- Nothing.`
 - A LaunchAgent runs it every evening at 18:00 (on waking, if the Mac was
   asleep), only if there were sessions or commits that day. Log:
   `~/Library/Logs/obsidian-journal.log`. That run is headless, and headless

@@ -16,7 +16,8 @@ Repo: `~/Documents/cradle` (`chezmoi source-path`),
    should be kept (e.g. `lazy-lock.json` after a plugin update), copy it back
    with `chezmoi re-add <path>`.
 2. Update README.md in the same change: the Layout and Day to day tables, the
-   Keyboard section and the "What changed" table where they're affected. Update
+   Keyboard section, the claude.ai connectors table and the "What changed"
+   table where they're affected. Update
    the Decisions list below if the user changes or makes a decision.
 3. Run `scripts/check` and fix anything it reports. It renders every file into
    a throwaway home folder and checks it with the program that reads it.
@@ -92,6 +93,7 @@ and every tag.
 | A file from someone else's repo | `.chezmoiexternal.toml`, pinned to a commit, with a link to its history above the entry |
 | A Neovim plugin | `dot_config/nvim/lua/plugins/`; then `chezmoi re-add ~/.config/nvim/lazy-lock.json` after it installs. Its language server goes in mise and `vim.lsp.enable` in `plugins/lsp.lua` |
 | Claude Code settings, plugins, MCP servers | see the Claude Code section of README.md |
+| Anything that only works through a claude.ai connector (Slack, Google, Atlassian...) | the feature where it belongs, plus a row in README's "claude.ai connectors" table: the connector, the access it needs, and what depends on it. Connectors aren't loaded in headless `claude -p` runs, so design for the next interactive session |
 | Obsidian settings or vault templates | `obsidian/`, applied to the vault by `run_onchange_after_35-obsidian.sh.tmpl` (JSON settings are merged into the vault's `.obsidian/` files) |
 | A file in the repo that must not land in `~` | `.chezmoiignore` (names starting with `.` are skipped already) |
 
@@ -189,6 +191,14 @@ are listed so they aren't proposed again without a reason.
   the claude.ai account, so nothing for it lives in this repo beyond the
   journal. A local Google MCP server, Workspace APIs with an OAuth client,
   `gcloud`, and the Google Drive desktop app were not chosen.
+- **Jira:** tickets are created through the claude.ai Atlassian connector
+  (needs write access granted on the connector), with no skill or defaults
+  in this repo for now. A skill with per-machine defaults (project, issue
+  type) can be added if the user files tickets often enough.
+- **claude.ai connectors** are the default for anything that talks to a
+  hosted service the user already signs in to, over local MCP servers with
+  tokens. README's "claude.ai connectors" table lists every connector and
+  what in cradle depends on it.
 - **Downloads from other repos** are pinned to a commit and updated by hand
   after reading what changed.
 - **mise waits a week for new releases** (`minimum_release_age = "7d"`):
