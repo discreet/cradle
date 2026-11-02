@@ -69,7 +69,7 @@ The commands behind what Claude does, for reference:
 | Pull and apply updates | `chezmoi update` |
 | Add a CLI tool | add it to `dot_config/mise/config.toml` (`mise registry <name>` to check it's there), then `chezmoi apply` |
 | Add an app | add a `cask` to `Brewfile`, then `chezmoi apply` |
-| Update tools | `mise upgrade` (tools set to `latest`); `brew upgrade` for apps |
+| Update tools | `mise upgrade` (tools set to `latest`), then regenerate completions: `chezmoi execute-template <"$(chezmoi source-path)/run_onchange_after_25-completions.sh.tmpl" \| bash`; `brew upgrade` for apps |
 | Change a tool version | edit `dot_config/mise/config.toml`, then `chezmoi apply` |
 | Pin a version for a project | `mise use kubectl@1.34` inside the project |
 | Update Neovim plugins | `:Lazy update` in Neovim, then `chezmoi re-add ~/.config/nvim/lazy-lock.json` (the lock file pins every machine to the same versions) |
@@ -130,7 +130,7 @@ Alternatives considered and not set up, in case they're wanted later:
 | `.chezmoi.toml.tmpl` | The questions chezmoi asks once per machine (name, email, signing key) and where the repo was cloned |
 | `dot_config/mise/config.toml` | Every command-line tool and language server, installed by mise |
 | `dot_bashrc`, `dot_bash_profile` | Shell entry points; they load `~/.config/bash/rc.d/*.bash` in order |
-| `dot_config/bash/rc.d/` | Homebrew, environment, mise, completions, aliases, prompt |
+| `dot_config/bash/rc.d/` | Homebrew (`brew shellenv`'s output written out, so new shells don't run brew), environment, mise, completions, aliases, prompt |
 | `dot_config/readline/inputrc` | Tab completion and prefix history search on Up/Down and `C-p`/`C-n` (bash's line editor) |
 | `dot_config/git/` | Git config (SSH commit signing), global ignore, allowed signers. Commits are personal by default; repos on the work host (or its work orgs) switch to the work email and key (`work`) |
 | `private_dot_ssh/` | SSH config (keys unlocked through the macOS keychain; a `git-work` host that points at the work git host and offers only the work key, so the host sees the work account) and GitHub's published host keys, so the first connection to GitHub is checked instead of trusted |
@@ -149,10 +149,10 @@ Alternatives considered and not set up, in case they're wanted later:
 
 Installed by mise and updated with `mise upgrade`; its own auto-updater is
 turned off (`DISABLE_AUTOUPDATER`) so it doesn't install a second copy outside
-mise. `CLAUDE_CONFIG_DIR` (set in
-`05-env.bash`) moves its config from `~/.claude` and `~/.claude.json` to
-`~/.config/claude`. That only works for `claude` started from a shell, which is
-the only way it's used here. Sign in once per machine with `claude auth login`.
+mise. `CLAUDE_CONFIG_DIR`, set in mise's config, moves its config from
+`~/.claude` and `~/.claude.json` to `~/.config/claude`. mise applies it however
+it runs `claude`: in a shell, through its shims (the evening journal) or with
+`mise exec`. Sign in once per machine with `claude auth login`.
 
 | Kind of file | Where it lives |
 |---|---|

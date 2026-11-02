@@ -147,7 +147,8 @@ are listed so they aren't proposed again without a reason.
   declined.
 - **Docker:** Colima from mise, started by a LaunchAgent, default VM size.
 - **Claude Code:** from mise with its auto-updater off; config in
-  `~/.config/claude` via `CLAUDE_CONFIG_DIR`; terminal only, no desktop app or
+  `~/.config/claude` via `CLAUDE_CONFIG_DIR` (set in mise's `[env]`, so it
+  reaches claude from shells, shims and launchd alike); terminal only, no desktop app or
   IDE extension. MCP servers are registered by
   `run_onchange_after_45-claude-mcp.sh.tmpl`. agentdb (npm, ruvnet) is the
   memory MCP server, with separate work and personal databases
@@ -201,7 +202,10 @@ from the live machine:
 When the user asks to update, do these in order and report what changed:
 
 1. **Tools:** `mise outdated`, then `mise upgrade`. This covers Claude Code and
-   the language servers. Nothing to commit unless a pin changes.
+   the language servers. Then regenerate bash completions for the new
+   versions (chezmoi only reruns that script when mise's config changes):
+   `chezmoi execute-template <"$(chezmoi source-path)/run_onchange_after_25-completions.sh.tmpl" | bash`.
+   Nothing to commit unless a pin changes.
 2. **Homebrew:** `brew update && brew upgrade` (bash, mise, apps).
 3. **Neovim plugins:** `nvim --headless "+Lazy! update" +qa`, then
    `chezmoi re-add ~/.config/nvim/lazy-lock.json`, `scripts/check`, commit

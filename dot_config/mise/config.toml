@@ -4,6 +4,10 @@
 # Go's module cache and build cache live here instead of ~/go. Set in mise so
 # it also applies to mise's own `go:` installs (gopls, goimports).
 GOPATH = "{{env.HOME}}/.local/share/go"
+# Keeps ~/.claude and ~/.claude.json under ~/.config/claude. Set here, it
+# reaches claude however mise runs it: activated shells, shims (launchd,
+# scripts) and `mise exec`.
+CLAUDE_CONFIG_DIR = "{{env.HOME}}/.config/claude"
 
 [tools]
 # Languages
