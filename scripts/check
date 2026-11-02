@@ -146,7 +146,7 @@ obsidian_instructions() {
 no_obsidian() {
   local h=$tmp/home-personal f bad=0
   for f in .config/claude/skills/journal .local/bin/journal-data .local/bin/obsidian-journal \
-    .local/bin/journal-slack-check \
+    .local/bin/journal-check \
     Library/LaunchAgents/local.obsidian-journal.plist; do
     [[ ! -e $h/$f ]] || { echo "installed without a vault: $f"; bad=1; }
   done
@@ -167,23 +167,35 @@ obsidian_apply() { # merges into existing settings, writes the template; nothing
   [[ -z $(czh home-personal execute-template <"$repo/run_onchange_after_35-obsidian.sh.tmpl" | tr -d '[:space:]') ]] ||
     { echo "the script isn't empty without a vault"; return 1; }
 }
-slack_check() { # asks once when the last weekday's Slack section is empty, else stays quiet
-  local hook=$home/.local/bin/journal-slack-check st=$tmp/slack-state day note out
+journal_check() { # offers once to fill empty Meetings/Slack sections, else stays quiet
+  local hook=$home/.local/bin/journal-check st=$tmp/journal-state day note out
   day=$(date -v-1d +%F)
   while (($(date -j -f %F "$day" +%u) > 5)); do day=$(date -j -v-1d -f %F "$day" +%F); done
   mkdir -p "$vault/.obsidian" "$vault/Daily"
   echo '{"folder":"Daily"}' >"$vault/.obsidian/daily-notes.json"
   note=$vault/Daily/$day.md
-  printf '## Terminal\n- did things\n\n## Slack\n\n' >"$note"
   run() { echo "{\"cwd\":\"$1\"}" | XDG_STATE_HOME=$st "$hook"; }
-  out=$(run /somewhere) || return 1
-  jq -e --arg d "$day" '.hookSpecificOutput.additionalContext | contains($d)' <<<"$out" >/dev/null ||
-    { echo "no offer for an empty Slack section: $out"; return 1; }
+  offers() { # offers <sections wanted in the offer> <sections not wanted>
+    out=$(run /somewhere) || return 1
+    jq -e --arg d "$day" --arg in "$1" --arg out "$2" '.hookSpecificOutput.additionalContext as $c
+      | ($c | contains($d)) and all($in | splits(" "); . as $s | $c | contains($s))
+      and all($out | splits(" ") | select(. != ""); . as $s | $c | contains($s) | not)' <<<"$out" >/dev/null ||
+      { echo "wanted an offer for '$1' (not '$2'): $out"; return 1; }
+    rm -rf "$st"
+  }
+  printf '## Meetings\n\n## Terminal\n- did things\n\n## Slack\n\n' >"$note"
+  offers "Meetings Slack" "" || return 1
+  printf '## Meetings\n- 10:00 Standup\n\n## Terminal\n\n## Slack  \n' >"$note"
+  offers "Slack" "Meetings" || return 1
+  rm -f "$note"
+  offers "Meetings Slack" "" || return 1
+  printf '## Meetings\n- Nothing.\n\n## Slack\n- #team: agreed on X\n' >"$note"
+  [[ -z $(run /somewhere) ]] || { echo "asked although both are filled in"; return 1; }
+  printf '## Slack\n' >"$note"
+  [[ -n $(run /somewhere) ]] || { echo "no offer for an empty Slack section"; return 1; }
   [[ -z $(run /somewhere) ]] || { echo "asked twice"; return 1; }
   rm -rf "$st"
   [[ -z $(run "$st/cradle/journal") ]] || { echo "asked in the evening run"; return 1; }
-  printf '## Terminal\n\n## Slack\n- #team: agreed on X\n' >"$note"
-  [[ -z $(run /somewhere) ]] || { echo "asked although Slack is filled in"; return 1; }
 }
 journal_data() { # sessions and commits from today only, without the evening run's own
   local j=$tmp/journal today now yesterday out
@@ -375,7 +387,7 @@ check "Obsidian: global instructions name the vault and private folders" obsidia
 check "Obsidian: nothing installed without a vault" no_obsidian
 check "Obsidian: Daily notes settings and template applied to the vault" obsidian_apply
 check "Obsidian: journal-data finds the day's sessions and commits" journal_data
-check "Obsidian: sessions offer once to add a missing Slack summary" slack_check
+check "Obsidian: sessions offer once to fill empty Meetings and Slack sections" journal_check
 check "JSON settings parse" jq empty "$repo"/obsidian/*.json "$home/.config/claude/settings.json" \
   "$home/.docker/config.json" "$repo/.claude/settings.json"
 

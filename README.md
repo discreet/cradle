@@ -125,7 +125,7 @@ Alternatives considered and not set up, in case they're wanted later:
 |---|---|
 | `CLAUDE.md`, `.claude/settings.json` | How Claude Code maintains this repo, and which commands it may run here without asking. Not copied to `~` |
 | `obsidian/` | Obsidian's Daily notes and Templates settings and the daily note template, applied to the vault by `run_onchange_after_35-obsidian.sh.tmpl`. Not copied to `~` |
-| `dot_config/claude/skills/journal/`, `dot_local/bin/executable_journal-data`, `dot_local/bin/executable_obsidian-journal`, `dot_local/bin/executable_journal-slack-check.tmpl`, `private_Library/LaunchAgents/local.obsidian-journal.plist.tmpl` | The Obsidian journal (see Obsidian); installed only when a vault is set |
+| `dot_config/claude/skills/journal/`, `dot_local/bin/executable_journal-data`, `dot_local/bin/executable_obsidian-journal`, `dot_local/bin/executable_journal-check.tmpl`, `private_Library/LaunchAgents/local.obsidian-journal.plist.tmpl` | The Obsidian journal (see Obsidian); installed only when a vault is set |
 | `.githooks/commit-msg` | Rejects commit messages that aren't Conventional Commits. `bootstrap.sh` turns it on with `git config core.hooksPath .githooks` |
 | `scripts/check` | Renders every file into a throwaway home folder and checks it with the program that reads it (shellcheck, tmux, git, ssh, plutil, jq, Neovim, Ghostty, Homebrew). Run before every apply |
 | `.chezmoi.toml.tmpl` | The questions chezmoi asks once per machine (name, email, signing key) and where the repo was cloned |
@@ -163,6 +163,7 @@ it runs `claude`: in a shell, through its shims (the evening journal) or with
 | Skills from GitHub | Add an entry to `.chezmoiexternal.toml`, pinned to a commit, with a link to the skill's history so updates can be checked by hand. Your own skills go in `dot_config/claude/skills/<name>/SKILL.md`. |
 | MCP servers (user scope) | Claude Code stores these in its own state file, so they're registered by `run_onchange_after_45-claude-mcp.sh.tmpl`: add an `add <name> '<json>'` line there and the server's tool to mise. It replaces a server of the same name; removing a line doesn't unregister it (`claude mcp remove --scope user <name>`). |
 | MCP server: agentdb | [AgentDB](https://github.com/ruvnet/agentdb) (`npm:agentdb` in mise), vector memory with reflexion, skills and a causal graph as MCP tools. Work and personal memories are separate databases in `~/.local/share/agentdb/`: `~/.local/bin/agentdb-mcp` starts the server in the session's folder and uses `work.db` when git's identity there is the work one (the same remote rules as commits) or the folder is inside one of the work folders chezmoi asked for (in git or not), otherwise `personal.db`. Without a work identity everything is personal. To change the work folders, edit `workFolders` (full paths, `;` between them) in `~/.config/chezmoi/chezmoi.toml` and `chezmoi apply`. The global instructions tell Claude to search it before real tasks and store what it learned after (`reflexion_retrieve`, `reflexion_store`); nothing is stored automatically. A session keeps the database it started with, so start Claude in the repo, not in a parent folder of work and personal repos. `/mcp` in Claude Code shows whether it's connected. |
+| claude.ai connectors | Connected once in your claude.ai account (Settings → Connectors), not in this repo, and available in every session on every machine: Slack and Google Calendar for the journal; Google Drive, Docs and Sheets to search Drive and create or edit Docs and Sheets from Claude. They belong to the claude.ai account, so they don't follow the work/personal split: every session sees the same Google account. |
 | Not managed | `.claude.json` (sign-in, per-project state), history, sessions, the plugin cache, and anything synced from your claude.ai account (connectors, synced skills). |
 
 ## Obsidian
@@ -177,25 +178,27 @@ directly as files, with no plugin or MCP server:
   repo; chezmoi asks for them on each machine.
 - Daily notes are configured from `obsidian/` in this repo: they live in
   `Daily/` as `YYYY-MM-DD.md` and start from `Templates/Daily.md` (a `date`
-  property, `## Notes` and `## Terminal`). A `run_onchange` script merges the
+  property and `## Notes`, `## Meetings`, `## Terminal`, `## Slack`). A `run_onchange` script merges the
   settings into the vault's `.obsidian/` files, keeping anything else set in
   Obsidian, and writes the template; edit them here, not in Obsidian, since
   the next apply overwrites the template. Obsidian picks up the settings when
   it next opens the vault.
-- `/journal [YYYY-MM-DD]` writes that day's daily note sections: `## Terminal`
-  (what you did in each Claude Code session, grouped by project, and your
-  commits) and `## Slack` (conversations you took part in, were mentioned in
-  or were sent as DMs, leading with what's waiting on you). It creates the
-  note from the template if needed, and only ever replaces its own sections.
-  Slack comes from the claude.ai Slack connector, connected in your claude.ai
-  account rather than this repo.
+- `/journal [YYYY-MM-DD]` writes that day's daily note sections:
+  `## Meetings` (that day's Google Calendar events, with decisions and your
+  action items from any attached meeting notes, such as Gemini's),
+  `## Terminal` (what you did in each Claude Code session, grouped by project,
+  and your commits) and `## Slack` (conversations you took part in, were
+  mentioned in or were sent as DMs, leading with what's waiting on you). It
+  creates the note from the template if needed, and only ever replaces its
+  own sections. Meetings and Slack come from claude.ai connectors (see Claude
+  Code); a source with nothing that day gets `- Nothing.`
 - A LaunchAgent runs it every evening at 18:00 (on waking, if the Mac was
   asleep), only if there were sessions or commits that day. Log:
   `~/Library/Logs/obsidian-journal.log`. That run is headless, and headless
-  Claude Code doesn't load claude.ai connectors, so it can't reach Slack.
-  Instead, a `SessionStart` hook (`journal-slack-check`) checks the last
-  weekday's note when you start Claude; if its `## Slack` section is empty,
-  Claude offers once to fill it.
+  Claude Code doesn't load claude.ai connectors, so it can't reach Calendar
+  or Slack. Instead, a `SessionStart` hook (`journal-check`) checks the last
+  weekday's note when you start Claude; if its `## Meetings` or `## Slack`
+  section is empty, Claude offers once to fill them.
 - `journal-data [YYYY-MM-DD]` prints what the summary is built from: your
   prompts and Claude's replies (shortened) and your commits in git repos up to
   four folders below home. Shell history is not used.

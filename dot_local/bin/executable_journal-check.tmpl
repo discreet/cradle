@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Claude Code SessionStart hook: if the last weekday's Obsidian daily note has
+# an empty Meetings or Slack section, asks Claude to offer to fill it. Those
+# come from claude.ai connectors (Google Calendar, Slack), which headless runs
+# like the evening journal can't use, so this happens in the next interactive
+# session. Asks once per day; the evening run is left alone.
+set -euo pipefail
+
+vault={{ .obsidianVault | quote }}
+state="${XDG_STATE_HOME:-$HOME/.local/state}/cradle/journal"
+[[ $(jq -r '.cwd // empty' 2>/dev/null) != "$state" ]] || exit 0
+
+day=$(date -v-1d +%F)
+while (($(date -j -f %F "$day" +%u) > 5)); do
+  day=$(date -j -v-1d -f %F "$day" +%F)
+done
+asked="$state/asked-$day"
+[[ ! -e $asked ]] || exit 0
+
+folder=$(jq -r '.folder // ""' "$vault/.obsidian/daily-notes.json" 2>/dev/null || true)
+note="$vault/${folder:+$folder/}$day.md"
+missing=()
+for section in Meetings Slack; do
+  # The section's lines up to the next heading, without blank ones.
+  if [[ -f $note ]] && awk -v re="^## ${section}[[:space:]]*\$" '
+    $0 ~ re { s = 1; next } /^## / { s = 0 } s && NF' "$note" | grep -q .; then
+    continue
+  fi
+  missing+=("$section")
+done
+((${#missing[@]})) || exit 0
+
+mkdir -p "$state"
+touch "$asked"
+jq -n --arg day "$day" --arg what "${missing[*]}" '{hookSpecificOutput: {hookEventName: "SessionStart",
+  additionalContext: "The Obsidian daily note for \($day) has no \($what | split(" ") | join(" or ")) summary yet (the evening journal run cannot reach claude.ai connectors). In your first reply, briefly offer once to add it with the journal skill for \($day); only run it if the user agrees."}}'
