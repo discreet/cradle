@@ -1,6 +1,6 @@
 ---
 name: journal
-description: Write or refresh the "Terminal" and "Slack" sections of an Obsidian daily note, summarising a day's Claude Code sessions, git commits and the Slack conversations the user took part in or was mentioned in. Use when the user asks to journal, log or summarise their day (or a given date) into Obsidian; the evening LaunchAgent also runs it.
+description: Write or refresh the "Meetings", "Terminal" and "Slack" sections of an Obsidian daily note, summarising a day's Google Calendar meetings, Claude Code sessions, git commits and the Slack conversations the user took part in or was mentioned in. Use when the user asks to journal, log or summarise their day (or a given date) into Obsidian; the evening LaunchAgent also runs it.
 ---
 
 # Journal
@@ -20,13 +20,26 @@ description: Write or refresh the "Terminal" and "Slack" sections of an Obsidian
    The user's ID is in the search tool's description, or from
    `slack_read_user_profile`. Read a thread with `slack_read_thread` only when
    the search results don't make the conversation clear.
-4. If there are no sessions, commits or Slack messages, say so and stop.
-5. **Find the daily note:** the vault is named in your global instructions.
+4. **Meetings**, only if Google Calendar tools
+   (`mcp__claude_ai_Google_Calendar__*`) are available; otherwise leave
+   Meetings out and say so. List the events on the user's primary calendar
+   that day. Keep the ones they organised or didn't decline; leave out all-day
+   events (out of office, holidays, working location) and blocks with no other
+   guests (focus time). If an event has meeting notes attached (a Google Doc,
+   such as Gemini's "Notes by Gemini") and Google Drive tools are available,
+   read them for the decisions and the action items.
+5. If there are no meetings, sessions, commits or Slack messages, say so and
+   stop.
+6. **Find the daily note:** the vault is named in your global instructions.
    Read `<vault>/.obsidian/daily-notes.json` if it exists: `folder` is where
    daily notes live (default: the vault root) and `format` is the file name
    as a Moment.js date format (default `YYYY-MM-DD`).
-6. **Write the sections.** Keep each short enough to skim in a minute, and use
+7. **Write the sections.** Keep each short enough to skim in a minute, and use
    `[[wikilinks]]` only to notes that already exist in the vault.
+   - `## Meetings`, in time order, one line each: `- 10:00 Title (with
+     who)`, naming a team or a few people rather than every guest. Under a
+     meeting with notes, a bullet or two of what was decided. Lead the
+     section with action items for the user from any meeting's notes.
    - `## Terminal`, grouped by project or repo: a few bullets on what was done
      and why, decisions made and anything left open (not a list of commands),
      then the commits, one line each: `abc1234 subject`.
@@ -34,12 +47,16 @@ description: Write or refresh the "Terminal" and "Slack" sections of an Obsidian
      what was decided, and what's still waiting on the user (questions put to
      them, requests, follow-ups they promised). Lead with anything waiting on
      the user.
-7. **Update the note:** for each section, replace it if the note has it (up to
+   - A source you checked that had nothing gets one line, `- Nothing.`, so the
+     note shows it was checked. Leave a source you couldn't reach out
+     entirely: the next interactive session offers to fill its empty section.
+8. **Update the note:** for each section, replace it if the note has it (up to
    the next `## ` heading) and touch nothing else; otherwise append it. If the
    note doesn't exist, create it from the template named by `template` in
    `daily-notes.json` (`<vault>/<template>.md`), with `{{date}}`,
    `{{date:FORMAT}}` and `{{title}}` filled in for that day, then fill its
    sections. Without a template, create the note with only these sections.
-8. **Leave out** secrets (tokens, passwords, keys, connection strings, meeting
-   passcodes), anything from vault folders you must not read, and details
+9. **Leave out** secrets (tokens, passwords, keys, connection strings, meeting
+   passcodes, meeting links and dial-in numbers), anything from vault folders
+   you must not read, and details
    about other people beyond what the work needs.

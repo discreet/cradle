@@ -12,11 +12,11 @@
 {{- /*
   The Obsidian vault is a working folder in every session; Claude's file
   tools can't read or edit the folders named as private; and each session
-  starts by checking for a missing Slack summary (journal-slack-check).
+  starts by checking for missing Meetings or Slack summaries (journal-check).
 */ -}}
 {{- if .obsidianVault -}}
 {{-   $_ := set $managed.permissions "additionalDirectories" (list .obsidianVault) -}}
-{{-   $check := dict "type" "command" "command" (joinPath .chezmoi.homeDir ".local/bin/journal-slack-check") -}}
+{{-   $check := dict "type" "command" "command" (joinPath .chezmoi.homeDir ".local/bin/journal-check") -}}
 {{-   $_ := set $managed "hooks" (dict "SessionStart" (list (dict "hooks" (list $check)))) -}}
 {{-   $deny := list -}}
 {{-   range splitList ";" .obsidianPrivate -}}

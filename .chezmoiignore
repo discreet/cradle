@@ -11,6 +11,6 @@ scripts
 .config/claude/skills/journal
 .local/bin/journal-data
 .local/bin/obsidian-journal
-.local/bin/journal-slack-check
+.local/bin/journal-check
 Library/LaunchAgents/local.obsidian-journal.plist
 {{- end }}

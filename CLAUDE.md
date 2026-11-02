@@ -169,14 +169,20 @@ are listed so they aren't proposed again without a reason.
   forbidden otherwise by the global instructions). The `journal` skill
   summarises the day's Claude Code sessions and git commits into a
   `## Terminal` section of the daily note, run by a LaunchAgent every evening
-  at 18:00. Slack conversations go in a `## Slack` section via the claude.ai
-  Slack connector; headless `claude -p` doesn't load connectors (tested,
-  2.1.314), so a SessionStart hook has the next interactive session offer to
-  fill it (chosen over on-demand only and a local Slack MCP server with a
-  token). Daily notes are managed from `obsidian/`: `Daily/YYYY-MM-DD.md`,
+  at 18:00. Meetings (Google Calendar, plus decisions and action items from
+  attached meeting notes) and Slack conversations go in `## Meetings` and
+  `## Slack` via the claude.ai connectors; headless `claude -p` doesn't load
+  connectors (tested, 2.1.314), so a SessionStart hook (`journal-check`) has
+  the next interactive session offer to fill whichever is empty (chosen over
+  on-demand only and local MCP servers with tokens). Daily notes are managed from `obsidian/`: `Daily/YYYY-MM-DD.md`,
   from `Templates/Daily.md`, which the repo overwrites (the user chose a
   managed template over a create-once one). Shell history was left out on purpose; per-session summaries and
   an on-demand-only journal were declined.
+- **Google Workspace:** through claude.ai connectors only (Calendar for the
+  journal; Drive, Docs and Sheets for searching and editing), connected in
+  the claude.ai account, so nothing for it lives in this repo beyond the
+  journal. A local Google MCP server, Workspace APIs with an OAuth client,
+  `gcloud`, and the Google Drive desktop app were not chosen.
 - **Downloads from other repos** are pinned to a commit and updated by hand
   after reading what changed.
 - **mise waits a week for new releases** (`minimum_release_age = "7d"`):
