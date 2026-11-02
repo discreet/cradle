@@ -10,8 +10,6 @@ export CLICOLOR=1
 # Quit if one screen, keep colours, smart-case search.
 export LESS=-FRi
 export INPUTRC="$HOME/.config/readline/inputrc"
-# Keeps ~/.claude and ~/.claude.json under ~/.config/claude instead.
-export CLAUDE_CONFIG_DIR="$HOME/.config/claude"
 # `go install` puts binaries on PATH. (GOPATH is set in mise's config; GOBIN
 # isn't, or mise's own go: installs would land here too.)
 export GOBIN="$HOME/.local/bin"

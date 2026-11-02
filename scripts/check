@@ -115,6 +115,12 @@ ssh_key() { # ssh_key <ssh config> <host> <the only key ssh should offer>
 ssh_only() { # ssh_only <ssh config> <host>: keys in the agent aren't offered
   ssh -G -F "$1" "$2" | grep -qx 'identitiesonly yes' || { echo "IdentitiesOnly is off for $2"; return 1; }
 }
+brew_env() { # 00-homebrew.bash sets what `brew shellenv` sets: brew_env <MANPATH or "">
+  local show='env | grep -E "^(HOMEBREW_[A-Z]+|PATH|MANPATH|INFOPATH)=" | sort' want got
+  want=$(env -i HOME="$tmp" PATH=/usr/bin:/bin ${1:+MANPATH=$1} bash --norc --noprofile -c "eval \"\$(/opt/homebrew/bin/brew shellenv)\"; $show")
+  got=$(env -i HOME="$tmp" PATH=/usr/bin:/bin ${1:+MANPATH=$1} bash --norc --noprofile -c "source \"\$1\"; $show" _ "$home/.config/bash/rc.d/00-homebrew.bash")
+  [[ $got == "$want" ]] || { diff <(echo "$want") <(echo "$got"); return 1; }
+}
 claude_merge() { # managed Claude settings merge over a live file and keep its keys
   local live=$tmp/merge/.config/claude/settings.json out
   mkdir -p "${live%/*}"
@@ -295,6 +301,12 @@ for f in bootstrap.sh scripts/check .githooks/commit-msg run_*; do
 done
 check "shellcheck bash startup files and ~/.local/bin" sc "$home/.bash_profile" "$home/.bashrc" \
   "$home"/.config/bash/rc.d/*.bash "$home"/.local/bin/*
+if [[ -x /opt/homebrew/bin/brew ]]; then
+  check "00-homebrew.bash matches brew shellenv" brew_env ""
+  check "00-homebrew.bash matches brew shellenv (MANPATH set)" brew_env /usr/share/man
+else
+  skip "brew shellenv (Homebrew not installed)"
+fi
 check "readline loads inputrc" inputrc "$home/.config/readline/inputrc"
 
 if have tmux; then

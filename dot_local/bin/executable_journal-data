@@ -10,7 +10,8 @@ from=$(date -j -f '%Y-%m-%d %H:%M:%S' "$day 00:00:00" +%s)
 to=$(date -j -v+1d -f '%Y-%m-%d %H:%M:%S' "$day 00:00:00" +%s)
 start=$(date -u -r "$from" +%Y-%m-%dT%H:%M:%SZ)
 end=$(date -u -r "$to" +%Y-%m-%dT%H:%M:%SZ)
-projects="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects"
+# obsidian-journal runs this outside mise, which sets CLAUDE_CONFIG_DIR.
+projects="${CLAUDE_CONFIG_DIR:-$HOME/.config/claude}/projects"
 # The evening run works from here; its own session isn't part of the day.
 skip="${XDG_STATE_HOME:-$HOME/.local/state}/cradle/journal"
 
