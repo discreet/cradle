@@ -16,7 +16,8 @@ Repo: `~/Documents/cradle` (`chezmoi source-path`),
    should be kept (e.g. `lazy-lock.json` after a plugin update), copy it back
    with `chezmoi re-add <path>`.
 2. Update README.md in the same change: the Layout and Day to day tables, the
-   Keyboard section and the "What changed" table where they're affected. Update
+   Keyboard section, the claude.ai connectors table and the "What changed"
+   table where they're affected. Update
    the Decisions list below if the user changes or makes a decision.
 3. Run `scripts/check` and fix anything it reports. It renders every file into
    a throwaway home folder and checks it with the program that reads it.
@@ -189,6 +190,10 @@ are listed so they aren't proposed again without a reason.
   the claude.ai account, so nothing for it lives in this repo beyond the
   journal. A local Google MCP server, Workspace APIs with an OAuth client,
   `gcloud`, and the Google Drive desktop app were not chosen.
+- **claude.ai connectors** are the default for anything that talks to a
+  hosted service the user already signs in to, over local MCP servers with
+  tokens. README's "claude.ai connectors" table lists every connector and
+  what in cradle depends on it.
 - **Downloads from other repos** are pinned to a commit and updated by hand
   after reading what changed.
 - **mise waits a week for new releases** (`minimum_release_age = "7d"`):
