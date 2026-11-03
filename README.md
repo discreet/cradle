@@ -125,21 +125,23 @@ Ghostty draws the terminal and tmux keeps sessions alive. Ghostty's first
 window runs `tmux-pick`, which attaches to a session.
 [Rex](https://superlogical.com), from Ghostty's author, does both jobs in one
 app. It's a possible later change, not set up. Checked 2026-11-03 against its
-[docs](https://www.superlogical.com/rex/docs), which are now public: it's still
-a beta for invited testers (the macOS app, plus a Linux and FreeBSD server),
-with no Homebrew cask:
+[docs](https://www.superlogical.com/rex/docs), changelog and beta feedback
+(through the `superlogical` MCP server): still a beta for invited testers,
+with new builds almost daily (Mac `0.1.0-preview.25`, Linux server
+`preview.12`) and no cask or download script until a public release:
 
 | | Ghostty + tmux (today) | Rex (beta, checked 2026-11-03) |
 |---|---|---|
 | Sessions outlive the app | Yes, through tmux | Yes: a server keeps sessions running whether or not a client is attached |
-| Remote | SSH, with tmux on the far end if wanted | Its own client/server, not SSH: a Rex server on Linux or FreeBSD, reached over Tailscale or a network listener. Callers are trusted by how they connect; sign-in with SSH keys is planned. No Windows server yet |
-| Scrollback and selection | Ghostty's, but tmux's copy mode inside a session | Native inside a session (about 64 MiB scrollback, optional copy on select) |
-| Splits, tabs | tmux panes and windows (prefix `C-Space`) | Panes and tabs on Command keys (`⌘D`, `⇧⌘D`, `⌘T`); any key can be rebound, including tmux-style prefix sequences |
-| Extras | Ghostty shell integration, themes | Per-pane activity in tabs (working, progress, needs attention), open a session on the web, Ghostty/iTerm theme import |
-| Config | `dot_config/ghostty/config`, `dot_config/tmux/tmux.conf` | Lua: `~/.config/rex/init.lua`, `rex config check` / `reload` |
-| Platforms | macOS, Linux | macOS app; Linux and FreeBSD server. iOS, Linux and Windows apps not in testing |
-| License | Both open source | No license or source published; no telemetry, account or license checks |
-| Install | Brewfile cask, mise | Testers only: the Mac app, and Linux packages behind a Discord sign-in. No cask |
+| Remote | SSH, with tmux on the far end if wanted | Its own client/server, not SSH: a Rex server on Linux or FreeBSD, reached over Tailscale (or Headscale) or a network listener. Callers are trusted by how they connect; sign-in with SSH keys is planned. No Windows server yet |
+| Scrollback and selection | Ghostty's, plus tmux's keyboard copy mode | Native, by mouse (about 64 MiB scrollback). No keyboard copy mode: it's the most-asked-for feature and accepted, but the team warns it's hard; testers script stand-ins in Lua |
+| Splits, tabs | tmux panes and windows (prefix `C-Space`) | Panes, tabs and floating windows on Command keys (`⌘D`, `⇧⌘D`, `⌘T`); any key can be rebound, including tmux-style prefix sequences. "Last pane" and tmux-style popups are accepted, not built |
+| Extras | Ghostty shell integration, themes | Per-pane activity in tabs (working, blocked, done), asks before closing busy panes, open a session on the web, an iPhone/iPad app paired by QR code, Ghostty/iTerm theme import |
+| Config | `dot_config/ghostty/config`, `dot_config/tmux/tmux.conf` | Lua `~/.config/rex/init.lua` holds keys, actions and hosts (`rex config check` / `reload`). Appearance and most other settings are only in the app's Settings; keeping them in a file was deferred, so chezmoi could manage only part of it |
+| Updates | mise and Homebrew, when asked | The Mac app updates itself by default (can be turned off in its Settings) |
+| Platforms | macOS, Linux | Mac and iOS apps; Linux and FreeBSD server. Linux and Windows apps not in testing |
+| License | Both open source | Closed source and unfree; free to use, with no telemetry, account or license checks |
+| Install | Brewfile cask, mise | Testers only: a Mac `.dmg`, iOS through TestFlight, Linux packages behind a Discord sign-in. More install options promised for the public release |
 
 Switching would replace tmux as well as Ghostty: `tmux-pick`, `tmux.conf` and
 the `C-Space` prefix would go. It would be a breaking change. Revisit once Rex
