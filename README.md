@@ -42,6 +42,32 @@ installs Neovim's plugins at the versions in `lazy-lock.json`. It ends by
 listing the manual steps left: adding the key to GitHub, and signing in to
 Claude Code.
 
+## Folders
+
+Everything lives under `~/Documents` (not synced to iCloud, which breaks git
+repos), split into work and personal:
+
+```
+~/Documents/
+├── cradle/                 this repo
+├── work/                   the work folder for chezmoi's question
+│   ├── code/<org>/<repo>   repos, by the org or owner in their remote
+│   ├── Obsidian/           work vault
+│   └── <topic>/            anything else: exports, prep, files to hand over
+└── personal/
+    ├── code/<owner>/<repo>
+    ├── Obsidian/           personal vault
+    └── <topic>/
+```
+
+At `chezmoi init`, answer the work folders question with `~/Documents/work`
+and the vault questions with the two `Obsidian/` folders. Everything under
+`work/` is then work for Claude (memory, journal, vault), in git or not;
+work repos cloned elsewhere still count by their remote. Start Claude
+inside `work/` or `personal/` (a repo, a topic, or the folder itself),
+never in `~/Documents`: a session's folder decides work or personal for the
+whole session, and `~/Documents` holds both.
+
 ## Managed with Claude Code
 
 After the first setup, changes are made by asking Claude Code, from any
