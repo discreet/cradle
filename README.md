@@ -144,12 +144,34 @@ with new builds almost daily (Mac `0.1.0-preview.25`, Linux server
 | Install | Brewfile cask, mise | Testers only: a Mac `.dmg`, iOS through TestFlight, Linux packages behind a Discord sign-in. More install options promised for the public release |
 
 Switching would replace tmux as well as Ghostty: `tmux-pick`, `tmux.conf` and
-the `C-Space` prefix would go. It would be a breaking change. Revisit once Rex
-has a public download and a cask.
+the `C-Space` prefix would go. It would be a breaking change.
 
-To read up on Rex in the meantime, Claude Code has Superlogical's community
-MCP server (`superlogical`, see Claude Code): Rex's docs, changelog and beta
-Discord threads.
+### What Rex needs before switching
+
+Switch when every row is met. The list covers what this setup and the way
+it's run need, not tmux or Ghostty habits: with Rex, its own keys and ways of
+working get learned from scratch. ✅ met, ◐ partly or unconfirmed, ❌ not
+yet. Status as of 2026-11-03.
+
+| | Rex must | Because | Status |
+|---|---|---|---|
+| 1 | Have a stable public release, with no open crash or input bugs in daily use | Daily tools here aren't betas; mise even waits a week before taking a new release | ❌ Tester previews only; the stable channel has no releases yet |
+| 2 | Install and update from this repo: a Homebrew cask, or a mise tool for the CLI | Every app is a Brewfile cask and every CLI tool is in mise | ❌ A `.dmg` for testers; "more installation options for public release" |
+| 3 | Update only when asked | Updates are run on purpose (Updating everything); Claude Code's own updater is off | ◐ Self-installs by default; turning that off is a Settings switch behind Developer Mode, not a file |
+| 4 | Keep every setting in files chezmoi can manage: look (theme, font, padding, cursor), Option as Alt, keys, hosts | Claude makes every change in this repo; nothing is set by hand | ◐ `init.lua` holds keys, actions and hosts; look and most other settings are only in the app's Settings. Keeping them in a file was deferred. Unconfirmed whether Settings are plain `defaults` keys a `run_onchange_` script could write |
+| 5 | Let Claude check a config change without touching live sessions | Changes are tested in a throwaway home and an isolated tmux server, never on the live one | ◐ `rex config check <file>` checks a draft; an isolated test server is unconfirmed |
+| 6 | Run Neovim fully: true colour, focus events (reload changed files), Option as Alt, Ctrl keys | Neovim is the editor; Option is Alt for word movement in bash and Neovim | ◐ Option-as-Alt setting exists (broken in floating panes); an open bug shifts true-colour values |
+| 7 | Copy text from output and scrollback without the mouse, in whatever way Rex chooses | Work is keyboard-driven (Neovim, arrow keys off) | ❌ Mouse only; accepted, with a warning that it's hard |
+| 8 | Keep sessions running after the window or app closes, and get back to them at launch | Work is left running between days | ✅ The server keeps sessions; a session picker and "new session on launch" exist |
+| 9 | Work over plain SSH to hosts without Rex | Work and personal hosts are reached with SSH keys, per identity | ✅ `rex terminfo setup` / `host install` handle `TERM` |
+| 10 | Copy from a remote program to the Mac clipboard | Copying from remote shells (OSC 52) | ✅ OSC 52 works; remote-Mac clipboard bugs are open |
+| 11 | If persistent remote sessions are wanted: sign in to a remote Rex server with SSH keys, on any host | Work can be any git host, reached with its own key; Tailscale can't be assumed there | ❌ Tailscale or no authentication; SSH-key sign-in planned |
+| 12 | Set up Claude Code's Rex skill and hook inside this repo's Claude config | Claude Code runs in the terminal all day, from `~/.config/claude` (`CLAUDE_CONFIG_DIR`), managed by chezmoi | ◐ `rex skill setup` exists (`--agent`, `--dry-run`) but writes to the agent's settings itself and looks for `~/.claude`; it would need to be brought into the repo |
+| 13 | Need no account and send no telemetry | Nothing here phones home or needs a sign-in to run | ✅ No telemetry, account or licence checks |
+
+To recheck, ask Claude: it reads Rex's docs, changelog and feedback through
+the `superlogical` MCP server.
+
 
 ## Layout
 

@@ -126,8 +126,11 @@ are listed so they aren't proposed again without a reason.
   on 2026-11-03, because Rex is only an invite-only beta (rechecked the same
   day with its docs, changelog and beta feedback: still testers only, no
   cask, no keyboard copy mode, most settings outside its config file).
-  Possible later step: when Rex has a public download and a cask, compare it
-  again using README's "Terminal" section. Switching replaces tmux too, so it's breaking.
+  Switch when every row of README's "What Rex needs before switching" is
+  met; recheck it when asked. That list is about this setup's needs, not
+  tmux/Ghostty habits: with Rex the user will learn its own ways, so don't
+  add rows for recreating tmux keys or workflows. Switching replaces tmux
+  too, so it's breaking.
   Claude reads up on Rex through Superlogical's hosted community MCP server
   (`superlogical`, Discord sign-in via `/mcp`, needs the Rex Beta Discord).
 - **tmux:** lean; prefix `C-Space`. Pane movement stays separate from Neovim's
