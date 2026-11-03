@@ -119,6 +119,30 @@ Alternatives considered and not set up, in case they're wanted later:
   window 1, or `cmd+t=text:\x00c` for a new window. These replace Ghostty's own
   tab shortcuts.
 
+## Terminal: Ghostty + tmux, Rex considered
+
+Ghostty draws the terminal and tmux keeps sessions alive. Ghostty's first
+window runs `tmux-pick`, which attaches to a session.
+[Rex](https://superlogical.com), from Ghostty's author, does both jobs in one
+app. It's a possible later change, not set up. As of November 2026 it's an
+invite-only macOS beta with no public download, no docs and no Homebrew cask:
+
+| | Ghostty + tmux (today) | Rex (beta, Oct 2026) |
+|---|---|---|
+| Sessions outlive the app | Yes, through tmux | Yes, built in; reconnect from another device |
+| Remote | SSH, with tmux on the far end if wanted | Its own client/server; the Mac app hosts a server and connects to other Macs. Linux and Windows servers aren't in testing yet |
+| Scrollback and selection | Ghostty's, but tmux's copy mode inside a session | Native, inside a session |
+| Splits, tabs | tmux panes and windows (prefix `C-Space`) | Split panes; tabs and keys undocumented |
+| Extras | Ghostty shell integration, themes | Per-pane activity status, live session sharing, web and iOS clients planned |
+| Config | `dot_config/ghostty/config`, `dot_config/tmux/tmux.conf` | Unconfirmed (reportedly Lua, `~/.config/rex/init.lua`) |
+| Platforms | macOS, Linux | macOS only in testing |
+| License | Both open source | Free, no account, self-hostable; no license or source published |
+| Install | Brewfile cask, mise | Invite only |
+
+Switching would replace tmux as well as Ghostty: `tmux-pick`, `tmux.conf` and
+the `C-Space` prefix would go. It would be a breaking change. Revisit once Rex
+has a public download, docs and a cask.
+
 ## Layout
 
 | Path | What it configures |
