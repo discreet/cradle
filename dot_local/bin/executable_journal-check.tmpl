@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Claude Code hook for the work vault's journal, run at SessionStart and on every
 # prompt (UserPromptSubmit), so a session left open overnight gets the next
-# morning's offer too. Asks Claude to offer, once each:
-# - on a weekday, to add today's meetings to today's daily note (as headings
-#   to take notes under), if they aren't there yet;
-# - to fill the last weekday's Meetings or Slack summary, if missing. Those
-#   come from claude.ai connectors (Google Calendar, Slack), which headless
-#   runs like the evening journal can't use.
+# morning's too. Once each:
+# - catches up: if the last weekday's Meetings or Slack summary is missing,
+#   Claude says it's catching up and fills them in without asking (then backs
+#   up the vaults). Those come from claude.ai connectors (Google Calendar,
+#   Slack), which headless runs like the evening journal can't use;
+# - on a weekday, offers to add today's meetings to today's daily note (as
+#   headings to take notes under), if they aren't there yet.
 # Each day is checked once, so later prompts return after two file tests. The
 # evening run itself is left alone.
 set -euo pipefail
@@ -34,6 +35,7 @@ has() {
     END { exit !found }' "$1"
 }
 offers=()
+catchup=""
 mkdir -p "$state"
 
 if [[ -n $agenda ]]; then
@@ -48,12 +50,15 @@ if [[ ! -e $state/checked-$day ]]; then
   has "$(note "$day")" Slack '[^[:space:]]' || missing+=(Slack)
   if ((${#missing[@]})); then
     what=${missing[*]}
-    offers+=("to add the ${what/ / and } summary to the daily note for $day with the journal skill (the evening run cannot reach claude.ai connectors)")
+    catchup="the ${what/ / and } summary for $day"
   fi
 fi
 
-((${#offers[@]})) || exit 0
+[[ -n $catchup || ${#offers[@]} -gt 0 ]] || exit 0
 when="in your first reply"
 [[ $event == SessionStart ]] || when="after handling the user's message"
-jq -n --arg event "$event" --arg when "$when" --args '{hookSpecificOutput: {hookEventName: $event,
-  additionalContext: ("Obsidian journal: \($when), briefly offer once each: " + ($ARGS.positional | join("; ")) + ". Only run what the user agrees to.")}}' "${offers[@]}"
+text="Obsidian journal, $when:"
+[[ -z $catchup ]] || text+=" without asking, tell the user in one line that you're catching up $catchup, then fill it in with the journal skill (the evening run can't reach claude.ai connectors)."
+((${#offers[@]} == 0)) || text+=" Briefly offer once: $(printf '%s; ' "${offers[@]}")and only run that if the user agrees."
+jq -n --arg event "$event" --arg text "$text" \
+  '{hookSpecificOutput: {hookEventName: $event, additionalContext: $text}}'
