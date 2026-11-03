@@ -177,6 +177,12 @@ are listed so they aren't proposed again without a reason.
   so they'd run the `agentdb` CLI on the same database (reuse
   `agentdb-mcp`'s work/personal choice); first check the CLI covers recall
   and store.
+- **Folders:** `~/Documents/work/` and `~/Documents/personal/`, each with
+  `code/<org>/<repo>`, its `Obsidian/` vault and other files in topic
+  folders next to `code/` (not as vault attachments); `cradle` stays at
+  `~/Documents/cradle`. `workFolders` is `~/Documents/work`. Flat `code/`,
+  grouping by product and a single shared vault were not chosen. README's
+  Folders section is the reference.
 - **Obsidian:** two vaults, work and personal (chosen over one shared
   vault). Claude uses both as plain files (extra working folders), not
   through an MCP server or plugin, and its instructions say to use the one
