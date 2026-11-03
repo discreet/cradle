@@ -143,6 +143,10 @@ Switching would replace tmux as well as Ghostty: `tmux-pick`, `tmux.conf` and
 the `C-Space` prefix would go. It would be a breaking change. Revisit once Rex
 has a public download, docs and a cask.
 
+To read up on Rex in the meantime, Claude Code has Superlogical's community
+MCP server (`superlogical`, see Claude Code): Rex's docs, changelog and beta
+Discord threads.
+
 ## Layout
 
 | Path | What it configures |
@@ -188,6 +192,7 @@ it runs `claude`: in a shell, through its shims (the evening journal) or with
 | Skills from GitHub | Add an entry to `.chezmoiexternal.toml`, pinned to a commit, with a link to the skill's history so updates can be checked by hand. Your own skills go in `dot_config/claude/skills/<name>/SKILL.md`. |
 | MCP servers (user scope) | Claude Code stores these in its own state file, so they're registered by `run_onchange_after_45-claude-mcp.sh.tmpl`: add an `add <name> '<json>'` line there and the server's tool to mise. It replaces a server of the same name; removing a line doesn't unregister it (`claude mcp remove --scope user <name>`). |
 | MCP server: agentdb | [AgentDB](https://github.com/ruvnet/agentdb) (`npm:agentdb` in mise), vector memory with reflexion, skills and a causal graph as MCP tools. Work and personal memories are separate databases in `~/.local/share/agentdb/`: `~/.local/bin/agentdb-mcp` starts the server in the session's folder and uses `work.db` when git's identity there is the work one (the same remote rules as commits) or the folder is inside one of the work folders chezmoi asked for (in git or not), otherwise `personal.db`. Without a work identity everything is personal. To change the work folders, edit `workFolders` (full paths, `;` between them) in `~/.config/chezmoi/chezmoi.toml` and `chezmoi apply`. The global instructions tell Claude to search it before real tasks and store what it learned after (`reflexion_retrieve`, `reflexion_store`); nothing is stored automatically. A session keeps the database it started with, so start Claude in the repo, not in a parent folder of work and personal repos. `/mcp` in Claude Code shows whether it's connected. |
+| MCP server: superlogical | [Superlogical's Rex community server](https://www.superlogical.com/rex/docs/beta/community-mcp), hosted over HTTP, so nothing is installed: Rex's docs, every release's changelog, and past and current Rex Beta Discord threads, for reading up on Rex (see Terminal). It signs in with Discord OAuth and needs membership of the Rex Beta Discord: run `/mcp` in Claude Code, pick `superlogical` and sign in, once per machine. Named `superlogical`, not `rex`, as Superlogical recommends, so it doesn't clash with Rex's CLI and skills. |
 | Not managed | `.claude.json` (sign-in, per-project state), history, sessions, the plugin cache, and anything synced from your claude.ai account (connectors, synced skills; see [claude.ai connectors](#claudeai-connectors)). |
 
 ## claude.ai connectors

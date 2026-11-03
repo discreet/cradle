@@ -15,3 +15,9 @@ add() {
 # agentdb (npm:agentdb in mise): vector memory, with separate work and personal
 # databases picked by ~/.local/bin/agentdb-mcp.
 add agentdb '{"type": "stdio", "command": {{ joinPath .chezmoi.homeDir ".local/bin/agentdb-mcp" | toJson }}}'
+
+# superlogical: Superlogical's hosted Rex community server (docs, changelog,
+# Rex Beta Discord threads). Signing in is per machine: /mcp in Claude Code,
+# with a Discord account in the Rex Beta Discord. Named superlogical, not rex,
+# as Superlogical recommends, so it doesn't clash with Rex's CLI and skills.
+add superlogical '{"type": "http", "url": "https://www.superlogical.com/rex/community-mcp"}'
