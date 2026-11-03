@@ -124,24 +124,26 @@ Alternatives considered and not set up, in case they're wanted later:
 Ghostty draws the terminal and tmux keeps sessions alive. Ghostty's first
 window runs `tmux-pick`, which attaches to a session.
 [Rex](https://superlogical.com), from Ghostty's author, does both jobs in one
-app. It's a possible later change, not set up. As of November 2026 it's an
-invite-only macOS beta with no public download, no docs and no Homebrew cask:
+app. It's a possible later change, not set up. Checked 2026-11-03 against its
+[docs](https://www.superlogical.com/rex/docs), which are now public: it's still
+a beta for invited testers (the macOS app, plus a Linux and FreeBSD server),
+with no Homebrew cask:
 
-| | Ghostty + tmux (today) | Rex (beta, Oct 2026) |
+| | Ghostty + tmux (today) | Rex (beta, checked 2026-11-03) |
 |---|---|---|
-| Sessions outlive the app | Yes, through tmux | Yes, built in; reconnect from another device |
-| Remote | SSH, with tmux on the far end if wanted | Its own client/server; the Mac app hosts a server and connects to other Macs. Linux and Windows servers aren't in testing yet |
-| Scrollback and selection | Ghostty's, but tmux's copy mode inside a session | Native, inside a session |
-| Splits, tabs | tmux panes and windows (prefix `C-Space`) | Split panes; tabs and keys undocumented |
-| Extras | Ghostty shell integration, themes | Per-pane activity status, live session sharing, web and iOS clients planned |
-| Config | `dot_config/ghostty/config`, `dot_config/tmux/tmux.conf` | Unconfirmed (reportedly Lua, `~/.config/rex/init.lua`) |
-| Platforms | macOS, Linux | macOS only in testing |
-| License | Both open source | Free, no account, self-hostable; no license or source published |
-| Install | Brewfile cask, mise | Invite only |
+| Sessions outlive the app | Yes, through tmux | Yes: a server keeps sessions running whether or not a client is attached |
+| Remote | SSH, with tmux on the far end if wanted | Its own client/server, not SSH: a Rex server on Linux or FreeBSD, reached over Tailscale or a network listener. Callers are trusted by how they connect; sign-in with SSH keys is planned. No Windows server yet |
+| Scrollback and selection | Ghostty's, but tmux's copy mode inside a session | Native inside a session (about 64 MiB scrollback, optional copy on select) |
+| Splits, tabs | tmux panes and windows (prefix `C-Space`) | Panes and tabs on Command keys (`⌘D`, `⇧⌘D`, `⌘T`); any key can be rebound, including tmux-style prefix sequences |
+| Extras | Ghostty shell integration, themes | Per-pane activity in tabs (working, progress, needs attention), open a session on the web, Ghostty/iTerm theme import |
+| Config | `dot_config/ghostty/config`, `dot_config/tmux/tmux.conf` | Lua: `~/.config/rex/init.lua`, `rex config check` / `reload` |
+| Platforms | macOS, Linux | macOS app; Linux and FreeBSD server. iOS, Linux and Windows apps not in testing |
+| License | Both open source | No license or source published; no telemetry, account or license checks |
+| Install | Brewfile cask, mise | Testers only: the Mac app, and Linux packages behind a Discord sign-in. No cask |
 
 Switching would replace tmux as well as Ghostty: `tmux-pick`, `tmux.conf` and
 the `C-Space` prefix would go. It would be a breaking change. Revisit once Rex
-has a public download, docs and a cask.
+has a public download and a cask.
 
 To read up on Rex in the meantime, Claude Code has Superlogical's community
 MCP server (`superlogical`, see Claude Code): Rex's docs, changelog and beta

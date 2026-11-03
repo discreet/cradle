@@ -123,8 +123,9 @@ are listed so they aren't proposed again without a reason.
 - **Ghostty:** built-in `Gruvbox Dark`, block cursor everywhere, both Option
   keys as Alt, SSH terminfo helper off. The first window runs `tmux-pick`.
   Ghostty + tmux was kept over Rex (Superlogical's terminal and multiplexer)
-  on 2026-11-03, because Rex is only an invite-only beta. Possible later step:
-  when Rex has a public download, docs and a cask, compare it again using
+  on 2026-11-03, because Rex is only an invite-only beta (rechecked the same
+  day against its now-public docs: still testers only, no cask). Possible
+  later step: when Rex has a public download and a cask, compare it again using
   README's "Terminal" section. Switching replaces tmux too, so it's breaking.
   Claude reads up on Rex through Superlogical's hosted community MCP server
   (`superlogical`, Discord sign-in via `/mcp`, needs the Rex Beta Discord).
