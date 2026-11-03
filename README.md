@@ -12,39 +12,127 @@ Configuration for an Apple Silicon Mac, built on three tools:
   bash-completion, mise itself, and GUI apps. git is Apple's, from the Command
   Line Tools.
 
-## New machine
+## Getting started
+
+Setting up a new Mac takes three stages: things to have ready, the bootstrap
+run, and a few steps only you can do afterwards.
+
+### Before you start
+
+**The Mac**
+
+- An Apple Silicon Mac, signed in to a user account that's an administrator.
+  Homebrew, adding bash to `/etc/shells` and changing the login shell all ask
+  for its password.
+- iCloud's **Desktop & Documents Folders** turned off (System Settings → your
+  name → iCloud → iCloud Drive). Everything lives under `~/Documents`, and
+  iCloud syncing breaks git repos there.
+- An internet connection. Bootstrap downloads Homebrew, the apps and every
+  mise tool.
+
+**Accounts**
+
+- **Personal GitHub account.** Note its noreply email (GitHub → Settings →
+  Emails, "Keep my email addresses private"): commits use it, and it keeps
+  your real address out of public repos.
+- **Work identity** (skip on a personal-only Mac): your work email, the work
+  git host (`github.com`, `gitlab.com` or a self-hosted name), your account
+  there, and the orgs or groups that are work, exactly as they appear in repo
+  URLs. The orgs are required when the work host is `github.com`, since
+  personal repos are there too.
+- **Two private repos for the Obsidian vault backups**, with their SSH URLs.
+  Each should be empty, or already hold that vault's notes. The personal one
+  goes on your GitHub account. The work one goes on the work host, inside a
+  work org, so it's committed and pushed as work. Skip a repo to leave that
+  vault without a backup.
+- **claude.ai account** for Claude Code, with its connectors connected at
+  claude.ai → Settings → Connectors (see [claude.ai connectors](#claudeai-connectors)):
+  Slack and Google Calendar for the journal, Google Drive, Docs and Sheets,
+  and Atlassian with write access for Jira tickets. They belong to the
+  account, so this is done once, not per machine.
+- **Discord account in the Rex Beta Discord** (optional), for the
+  `superlogical` MCP server.
+
+**Your answers to chezmoi's questions.** Bootstrap asks these once; the
+answers stay on the machine in `~/.config/chezmoi/chezmoi.toml`, never in
+this repo. The work questions come only when you give a work email; a vault's
+other questions only when you give the vault.
+
+| Question | Answer |
+|---|---|
+| Full name | As on your commits |
+| Personal git email | Your GitHub noreply address |
+| Work git email | Blank on a personal-only Mac |
+| Work git host | e.g. `github.com` |
+| Work orgs or groups | Space-separated, as in repo URLs |
+| Folders for Claude's work memory | `~/Documents/work` |
+| Work Obsidian vault folder | `~/Documents/work/Obsidian` |
+| Work vault folders Claude must not read | Folder names inside the vault, `;` between them |
+| Private git repo for the work vault | Its SSH URL |
+| Personal Obsidian vault folder | `~/Documents/personal/Obsidian` |
+| Personal vault folders Claude must not read | As above |
+| Private git repo for the personal vault | Its SSH URL |
+
+### Run bootstrap
+
+In Terminal (Ghostty isn't installed yet), as yourself, not with `sudo`:
 
 ```sh
-git clone https://github.com/discreet/cradle.git ~/.local/share/chezmoi
-~/.local/share/chezmoi/bootstrap.sh
+git clone https://github.com/discreet/cradle.git ~/Documents/cradle
+~/Documents/cradle/bootstrap.sh
 ```
 
 On a fresh Mac, `git` first offers to install the Command Line Tools; run the
-clone again once they finish. The clone uses HTTPS because the machine has no
-SSH key on GitHub yet (for a private repo, git asks for your GitHub username
-and a personal access token). The repo can live anywhere; chezmoi remembers
-where.
+clone again once they finish. The clone uses HTTPS because the Mac has no SSH
+key on GitHub yet. chezmoi remembers where the repo is.
 
-The bootstrap script installs Homebrew and mise, creates an SSH key if there
-isn't one, switches the clone's remote to SSH, turns on the repo's commit
-message hook, and runs `chezmoi init --apply`
-through mise. chezmoi asks once for your name, your personal git email (your
-GitHub noreply address keeps it private) and, if the machine is also used for
-work, a work email, the work git host (GitHub, GitLab or any other) and,
-optionally, the orgs or groups on it that are work, any folders whose Claude
-sessions are work (for agentdb's memory and the journal) and a work Obsidian
-vault. Every machine is also asked for a personal Obsidian vault, and each
-vault for a private git repo to back it up to (see Obsidian). With a work identity, the script
-also creates a separate work SSH key. It then
-installs the Brewfile, writes the dotfiles, runs `mise install` and loads the
-LaunchAgents. It creates the folder layout (see Folders): `~/Documents/personal/code`,
-`~/Documents/work/code` with a work identity, and the vault folders you gave
-that have no backup repo (`vault-sync` clones the others).
-Finally the script makes Homebrew's bash your login shell and
-installs Neovim's plugins at the versions in `lazy-lock.json`. It ends by
-listing the manual steps left: adding the key to GitHub, signing in to
-Claude Code and, with vaults, running `vault-sync` and opening them in
-Obsidian.
+While it runs, be ready for:
+
+- **Your Mac password**, for Homebrew, `/etc/shells` and the login shell
+  (some apps may ask too).
+- **A passphrase for each new SSH key**: the personal key, and with a work
+  identity a work key. It's saved in the macOS keychain, so you type it once.
+- **chezmoi's questions**, with the answers above.
+
+What it does, in order: installs Homebrew and mise; creates the personal SSH
+key if there isn't one; switches the clone's remote to SSH and turns on the
+repo's commit message hook; runs `chezmoi init --apply`, which asks the
+questions, installs the Brewfile, writes the dotfiles, runs `mise install`,
+registers Claude Code's MCP servers and loads the LaunchAgents; creates the
+work SSH key, with a work identity; creates the folder layout (see Folders)
+except vault folders with a backup repo, which `vault-sync` clones later;
+makes Homebrew's bash your login shell; and installs Neovim's plugins at the
+versions in `lazy-lock.json`. It ends by listing the steps below.
+
+### After bootstrap
+
+1. **Add the SSH keys to their accounts.** On GitHub (Settings → SSH and GPG
+   keys), add `~/.ssh/id_ed25519.pub` twice: once as an Authentication key
+   and once as a Signing key. Add `~/.ssh/id_ed25519_work.pub` to your work
+   account on the work host the same way (as a Signing key too, if the host
+   supports SSH signatures). Commits show as Verified only when each email you
+   gave chezmoi is verified (or is the noreply address) on its account.
+2. **Open Ghostty.** Its first window starts tmux (`tmux-pick`). New terminals
+   use Homebrew's bash; Caps Lock is already Control.
+3. **Sign in to Claude Code:** `claude auth login`, with the claude.ai account
+   that has the connectors. The first time you start `claude` in a folder,
+   trust it when asked; Claude Code runs no hooks (the journal's) until you do.
+4. **Fetch the vaults:** `vault-sync`, once the keys are on their accounts. It
+   clones each vault from its backup repo, or makes the first backup if the
+   repo is empty.
+5. **Open the vaults in Obsidian:** "Open folder as vault" for each vault
+   folder. Then run `chezmoi apply` once, so the work vault gets its Daily
+   notes settings and templates. Optionally, give "Templates: Insert
+   template" a hotkey (Settings → Hotkeys) to start meeting notes quickly.
+6. **Sign in to the apps** that aren't Claude: Slack, Firefox.
+7. **Optional: Rex's community MCP server.** In Claude Code, `/mcp`, pick
+   `superlogical` and sign in with Discord.
+8. **Check it all:** `chezmoi status` should print nothing, `mise ls` should
+   show every tool installed, and `scripts/check` in `~/Documents/cradle`
+   should pass.
+
+From then on, change anything by asking Claude Code in `~/Documents/cradle`
+(see Managed with Claude Code).
 
 ## Folders
 

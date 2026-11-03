@@ -15,9 +15,10 @@ Repo: `~/Documents/cradle` (`chezmoi source-path`),
    those on the next apply. If a program changed a managed file and the change
    should be kept (e.g. `lazy-lock.json` after a plugin update), copy it back
    with `chezmoi re-add <path>`.
-2. Update README.md in the same change: the Layout and Day to day tables, the
-   Keyboard section, the claude.ai connectors table and the "What changed"
-   table where they're affected. Update
+2. Update README.md in the same change: Getting started (anything to have
+   ready, a new chezmoi question, a bootstrap step or a manual step after
+   it), the Layout and Day to day tables, the Keyboard section, the claude.ai
+   connectors table and the "What changed" table where they're affected. Update
    the Decisions list below if the user changes or makes a decision.
 3. Run `scripts/check` and fix anything it reports. It renders every file into
    a throwaway home folder and checks it with the program that reads it.
