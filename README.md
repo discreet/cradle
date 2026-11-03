@@ -37,10 +37,12 @@ vault. Every machine is also asked for a personal Obsidian vault (see
 Obsidian). With a work identity, the script
 also creates a separate work SSH key. It then
 installs the Brewfile, writes the dotfiles, runs `mise install` and loads the
-LaunchAgents. Finally the script makes Homebrew's bash your login shell and
+LaunchAgents. It creates the folder layout (see Folders): `~/Documents/personal/code`,
+`~/Documents/work/code` with a work identity, and the vault folders you gave.
+Finally the script makes Homebrew's bash your login shell and
 installs Neovim's plugins at the versions in `lazy-lock.json`. It ends by
-listing the manual steps left: adding the key to GitHub, and signing in to
-Claude Code.
+listing the manual steps left: adding the key to GitHub, signing in to
+Claude Code and, with vaults, opening them in Obsidian.
 
 ## Folders
 
@@ -60,6 +62,8 @@ repos), split into work and personal:
     └── <topic>/
 ```
 
+Bootstrap creates `personal/code`, `work/code` (with a work identity) and the
+vault folders; `<org>` and topic folders come as you clone and file things.
 At `chezmoi init`, answer the work folders question with `~/Documents/work`
 and the vault questions with the two `Obsidian/` folders. Everything under
 `work/` is then work for Claude (memory, journal, vault), in git or not;
@@ -323,8 +327,9 @@ or MCP server:
   (Settings → Hotkeys), then it's the hotkey, "Mee", Enter. A `run_onchange` script merges the
   settings into the work vault's `.obsidian/` files, keeping anything else set in
   Obsidian, and writes the template; edit them here, not in Obsidian, since
-  the next apply overwrites the template. Obsidian picks up the settings when
-  it next opens the vault.
+  the next apply overwrites the template. If the vault hasn't been opened in
+  Obsidian yet, it waits, and the first apply after opening it writes them.
+  Obsidian picks up the settings when it next opens the vault.
 - **Meeting notes during the day:** `/journal agenda` (or "add today's
   meetings") puts today's Google Calendar events into `## Meetings` as
   `### 10:00 Title (with who)` headings; type your notes under them, or start
