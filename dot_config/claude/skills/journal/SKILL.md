@@ -100,6 +100,10 @@ or remove their text. It looks like this:
 7. **Update the note:** replace Terminal and Slack if the note has them (up to
    the next `## ` heading) and touch nothing else; otherwise append them.
    Merge Meetings as described above instead of replacing it.
+8. **Back up:** run `vault-sync`, if it's installed, so the vault's backup
+   repo has the new summary (it's allowed without asking). Skip this when
+   your prompt says the run backs up after you (the evening run). If it
+   fails, tell the user what it printed.
 
 ## Which events
 

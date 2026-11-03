@@ -207,8 +207,12 @@ are listed so they aren't proposed again without a reason.
   instructions). The personal vault is unstructured and ad hoc: cradle writes
   nothing to it, no daily notes, templates or journal. Obsidian doesn't sync
   between machines; each vault is backed up to its own private git repo
-  (personal on GitHub, work on the work host) by `vault-sync`, nightly at
-  18:30 (chosen over Obsidian Sync, iCloud Drive and Time Machine). Everything below is
+  (personal on GitHub, work on the work host) by `vault-sync` (chosen over
+  Obsidian Sync, iCloud Drive and Time Machine): every evening at 18:00 once
+  the journal has written the day's note (its run starts `vault-sync`; a
+  machine without a work vault has its own 18:00 agent), and again after
+  the journal skill fills in the Slack and Meetings summaries in the next
+  interactive session (allowed without asking). Everything below is
   the work vault only. The `journal` skill
   summarises the day's work Claude Code sessions and git commits (personal
   ones are left out) into a
