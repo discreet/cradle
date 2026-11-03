@@ -27,18 +27,22 @@
        once the only one, "obsidianVault"; its answers carry over as defaults. */ -}}
 {{- $workVault := "" -}}
 {{- $workVaultPrivate := "" -}}
+{{- $workVaultRepo := "" -}}
 {{- if $workEmail -}}
 {{-   $workVault = promptStringOnce . "workVault" "Work Obsidian vault folder for daily notes and the journal (leave blank for none)" (get . "obsidianVault" | default "") -}}
 {{-   if $workVault -}}
 {{-     $workVault = regexReplaceAll "^~" $workVault .chezmoi.homeDir | trimSuffix "/" -}}
 {{-     $workVaultPrivate = promptStringOnce . "workVaultPrivate" "Work vault folders Claude must not read (separated by semicolons; blank for none)" (get . "obsidianPrivate" | default "") -}}
+{{-     $workVaultRepo = promptStringOnce . "workVaultRepo" "Private git repo on the work host to back up the work vault to (SSH URL; blank for none)" -}}
 {{-   end -}}
 {{- end -}}
 {{- $personalVault := promptStringOnce . "personalVault" "Personal Obsidian vault folder (leave blank for none)" -}}
 {{- $personalVaultPrivate := "" -}}
+{{- $personalVaultRepo := "" -}}
 {{- if $personalVault -}}
 {{-   $personalVault = regexReplaceAll "^~" $personalVault .chezmoi.homeDir | trimSuffix "/" -}}
 {{-   $personalVaultPrivate = promptStringOnce . "personalVaultPrivate" "Personal vault folders Claude must not read (separated by semicolons; blank for none)" -}}
+{{-   $personalVaultRepo = promptStringOnce . "personalVaultRepo" "Private git repo to back up the personal vault to (SSH URL; blank for none)" -}}
 {{- end -}}
 
 # Remembers where the repo was cloned, so later commands find it from anywhere.
@@ -55,6 +59,8 @@ sourceDir = {{ .chezmoi.sourceDir | quote }}
   workVaultPrivate = {{ $workVaultPrivate | quote }}
   personalVault = {{ $personalVault | quote }}
   personalVaultPrivate = {{ $personalVaultPrivate | quote }}
+  workVaultRepo = {{ $workVaultRepo | quote }}
+  personalVaultRepo = {{ $personalVaultRepo | quote }}
 
 [edit]
   command = "nvim"

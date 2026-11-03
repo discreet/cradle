@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Backs up each Obsidian vault to its private git repo (chezmoi's workVaultRepo
+# and personalVaultRepo), run every evening by the local.vault-sync LaunchAgent
+# and by hand after setting up a machine. For each vault:
+# - no folder yet: clone the repo into it (a new machine);
+# - a folder that isn't a repo yet: start one and push it (the first backup);
+# - otherwise: commit what changed, pull (rebasing onto other machines'
+#   commits), push.
+# git picks the identity and key by the remote, like any repo: the work
+# vault's repo must be on the work host (in a work org), the personal one on
+# the personal account. A conflict leaves the vault as it was and shows a
+# notification. Log: ~/Library/Logs/vault-sync.log.
+set -uo pipefail
+
+# launchd's PATH is minimal; Apple's git comes first, as in a shell.
+PATH="/Library/Developer/CommandLineTools/usr/bin:$PATH:/usr/bin:/bin"
+failed=0
+
+fail() { # fail <vault> <message>
+  echo "$1: $2" >&2
+  osascript -e "display notification \"$2\" with title \"Vault backup failed: ${1##*/}\"" 2>/dev/null || true
+  failed=1
+}
+
+sync() { # sync <vault> <repo url>
+  local vault=$1 url=$2
+  [[ -n $vault && -n $url ]] || return 0
+  echo "== $vault"
+  if [[ ! -e $vault ]]; then
+    git clone -q "$url" "$vault" || { fail "$vault" "couldn't clone $url"; return; }
+  elif [[ ! -d $vault/.git ]]; then
+    if ! { git -C "$vault" init -q -b main && git -C "$vault" remote add origin "$url"; }; then
+      fail "$vault" "couldn't start a repo"
+      return
+    fi
+  fi
+  # A new or empty repo starts on main, whatever git's default branch is.
+  git -C "$vault" rev-parse -q --verify HEAD >/dev/null || git -C "$vault" symbolic-ref HEAD refs/heads/main
+  # Per-machine state stays out of the repo: Obsidian's window layout, its
+  # trash, Finder's files.
+  mkdir -p "$vault/.git/info"
+  printf '%s\n' '.obsidian/workspace*.json' '.trash/' '.DS_Store' >"$vault/.git/info/exclude"
+
+  git -C "$vault" add -A || { fail "$vault" "couldn't stage changes"; return; }
+  if ! git -C "$vault" diff --cached --quiet; then
+    git -C "$vault" commit -q -m "Vault backup $(date '+%F %H:%M')" ||
+      { fail "$vault" "couldn't commit"; return; }
+  fi
+  if git -C "$vault" ls-remote --exit-code -q origin >/dev/null 2>&1; then
+    git -C "$vault" fetch -q origin || { fail "$vault" "couldn't fetch"; return; }
+    if git -C "$vault" rev-parse -q --verify origin/main >/dev/null; then
+      if ! git -C "$vault" rev-parse -q --verify HEAD >/dev/null; then
+        # An empty vault folder: take the repo's notes.
+        git -C "$vault" checkout -q -B main origin/main || { fail "$vault" "couldn't check out the repo"; return; }
+      elif ! git -C "$vault" rebase -q origin/main; then
+        git -C "$vault" rebase --abort
+        fail "$vault" "conflicts with another machine's changes; resolve them in $vault"
+        return
+      fi
+    fi
+  fi
+  git -C "$vault" rev-parse -q --verify HEAD >/dev/null || return 0 # empty vault, empty repo
+  git -C "$vault" push -q -u origin HEAD:main || fail "$vault" "couldn't push"
+}
+
+echo "== $(date)"
+sync {{ .workVault | quote }} {{ .workVaultRepo | quote }}
+sync {{ .personalVault | quote }} {{ .personalVaultRepo | quote }}
+exit "$failed"

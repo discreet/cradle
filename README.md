@@ -33,16 +33,18 @@ GitHub noreply address keeps it private) and, if the machine is also used for
 work, a work email, the work git host (GitHub, GitLab or any other) and,
 optionally, the orgs or groups on it that are work, any folders whose Claude
 sessions are work (for agentdb's memory and the journal) and a work Obsidian
-vault. Every machine is also asked for a personal Obsidian vault (see
-Obsidian). With a work identity, the script
+vault. Every machine is also asked for a personal Obsidian vault, and each
+vault for a private git repo to back it up to (see Obsidian). With a work identity, the script
 also creates a separate work SSH key. It then
 installs the Brewfile, writes the dotfiles, runs `mise install` and loads the
 LaunchAgents. It creates the folder layout (see Folders): `~/Documents/personal/code`,
-`~/Documents/work/code` with a work identity, and the vault folders you gave.
+`~/Documents/work/code` with a work identity, and the vault folders you gave
+that have no backup repo (`vault-sync` clones the others).
 Finally the script makes Homebrew's bash your login shell and
 installs Neovim's plugins at the versions in `lazy-lock.json`. It ends by
 listing the manual steps left: adding the key to GitHub, signing in to
-Claude Code and, with vaults, opening them in Obsidian.
+Claude Code and, with vaults, running `vault-sync` and opening them in
+Obsidian.
 
 ## Folders
 
@@ -63,7 +65,8 @@ repos), split into work and personal:
 ```
 
 Bootstrap creates `personal/code`, `work/code` (with a work identity) and the
-vault folders; `<org>` and topic folders come as you clone and file things.
+vault folders (`vault-sync` clones those with a backup repo); `<org>` and
+topic folders come as you clone and file things.
 At `chezmoi init`, answer the work folders question with `~/Documents/work`
 and the vault questions with the two `Obsidian/` folders. Everything under
 `work/` is then work for Claude (memory, journal, vault), in git or not;
@@ -107,6 +110,7 @@ The commands behind what Claude does, for reference:
 | Pin a version for a project | `mise use kubectl@1.34` inside the project |
 | Update Neovim plugins | `:Lazy update` in Neovim, then `chezmoi re-add ~/.config/nvim/lazy-lock.json` (the lock file pins every machine to the same versions) |
 | Update a pinned skill | open the history link above its entry in `.chezmoiexternal.toml`, read what changed, put the new commit in its `url`, then `chezmoi apply` |
+| Back up the Obsidian vaults now | `vault-sync` (log: `~/Library/Logs/vault-sync.log`) |
 | Refresh GitHub's SSH host keys | only if GitHub rotates them (ssh then refuses to connect): regenerate `private_dot_ssh/known_hosts.github` from the `ssh_keys` list at https://api.github.com/meta |
 
 Docker runs in a [Colima](https://github.com/abiosoft/colima) VM that a
@@ -225,12 +229,13 @@ the `superlogical` MCP server.
 | `dot_config/nvim/` | Neovim: lazy.nvim, built-in LSP and completion (servers installed by mise), conform for formatting |
 | `dot_config/tmux/tmux.conf` | tmux (prefix `C-Space`; the built-in keys it relies on are listed at the top) |
 | `dot_config/ghostty/config` | Ghostty (Gruvbox dark). Its first window at launch runs `tmux-pick` |
+| `dot_local/bin/executable_vault-sync.tmpl`, `private_Library/LaunchAgents/local.vault-sync.plist.tmpl` | Backs up each Obsidian vault to its private git repo every evening (see Obsidian); installed only when a vault repo is set |
 | `dot_local/bin/executable_agentdb-mcp`, `dot_local/bin/executable_is-work.tmpl` | `~/.local/bin/agentdb-mcp`: starts agentdb's MCP server on the work or personal database (see Claude Code). `~/.local/bin/is-work [folder]`: exits 0 when a folder is work (git's identity there, or inside a work folder); agentdb, the journal and Claude's choice of vault all use it |
 | `dot_local/bin/executable_tmux-pick` | `~/.local/bin/tmux-pick`: lists tmux sessions, most recent first, to attach to or start a new one; starts one straight away if there are none. Esc or leaving tmux drops to a plain shell |
 | `dot_config/claude/`, `.chezmoitemplates/claude-settings.json` | Claude Code (see below) |
 | `dot_config/claude/skills/jira-ticket/` | The `jira-ticket` skill and `standards.md`, the standards every Story, Epic and Spike follows (see Jira tickets) |
 | `.chezmoiexternal.toml` | Files downloaded from other repos, pinned to a commit (Claude Code skills) |
-| `private_Library/LaunchAgents/` | At login: starts Colima (Docker), loads SSH keys from the keychain into ssh-agent (git signs commits through it) and makes Caps Lock a Control key. Every evening: the Obsidian journal |
+| `private_Library/LaunchAgents/` | At login: starts Colima (Docker), loads SSH keys from the keychain into ssh-agent (git signs commits through it) and makes Caps Lock a Control key. Every evening: the Obsidian journal (18:00) and the vault backups (18:30) |
 | `run_onchange_*` | Re-run `brew bundle`, `mise install` and completion generation when their inputs change, reload the LaunchAgents, register Claude Code's MCP servers, and turn off macOS's `⌃Space` shortcut |
 
 ## Claude Code
@@ -317,7 +322,20 @@ or MCP server:
   them any other way. Neither the vault paths nor the folder names are in
   this repo.
 - **The personal vault** is unstructured and ad hoc: cradle writes nothing
-  to it, with no daily notes, templates or journal.
+  to it, with no daily notes, templates or journal. Its `cradle.md` note
+  holds private notes about this setup that every machine needs but this
+  public repo can't hold (Claude reads and adds to it; see Memory).
+- **Backups:** Obsidian doesn't sync between machines here; each vault is
+  its own private git repo instead (chezmoi asks for the SSH URLs). Create
+  them empty first: the personal one on your GitHub account, the work one on
+  the work host, in a work org, so git commits and pushes with the work
+  identity. `vault-sync` runs every evening at 18:30, after the journal, and
+  on demand: it commits what changed, rebases onto anything another machine
+  pushed and pushes. Obsidian's window layout (`workspace.json`) and trash
+  stay out. On a new machine it clones each vault into its folder. If two
+  machines changed the same lines, it leaves the vault as it was and shows a
+  notification; resolve it with git in the vault. The journal leaves the
+  vaults' backup commits out.
 - **The work vault** is structured and automated, as below.
 - Daily notes are configured from `obsidian/` in this repo: they live in
   `Daily/` as `YYYY-MM-DD.md` and start from `Templates/Daily.md` (a `date`

@@ -51,11 +51,13 @@ fi
 
 # The folder layout (README's Folders): work/ only with a work identity, and
 # each vault folder given to chezmoi, ready to open in Obsidian as a vault.
+# A vault with a backup repo is left out: vault-sync clones it there once the
+# SSH keys are on their accounts.
 folders=(~/Documents/personal/code)
-[[ -n $work_email ]] && folders+=(~/Documents/work/code)
-while IFS= read -r vault || [[ -n $vault ]]; do
-  [[ -n $vault ]] && folders+=("$vault")
-done < <(chezmoi execute-template $'{{ .workVault }}\n{{ .personalVault }}')
+if [[ -n $work_email ]]; then folders+=(~/Documents/work/code); fi
+while IFS=$'\t' read -r vault repo || [[ -n $vault ]]; do
+  if [[ -n $vault && -z $repo ]]; then folders+=("$vault"); fi
+done < <(chezmoi execute-template $'{{ .workVault }}\t{{ .workVaultRepo }}\n{{ .personalVault }}\t{{ .personalVaultRepo }}')
 mkdir -p "${folders[@]}"
 
 brew_bash="$HOMEBREW_PREFIX/bin/bash"
@@ -89,8 +91,12 @@ cat <<DONE
   2. Open Ghostty.
   3. Sign in to Claude Code: claude auth login
 DONE
+if [[ -n $(chezmoi execute-template '{{ .workVaultRepo }}{{ .personalVaultRepo }}') ]]; then
+  echo "  4. Once the keys are on their accounts, run vault-sync to fetch the vaults"
+  echo "     from their backup repos (or to start them, if the repos are empty)."
+fi
 if [[ -n $(chezmoi execute-template '{{ .workVault }}{{ .personalVault }}') ]]; then
-  echo "  4. In Obsidian, open each vault folder you gave (Open folder as vault)."
+  echo "  5. In Obsidian, open each vault folder you gave (Open folder as vault)."
   if [[ -n $(chezmoi execute-template '{{ .workVault }}') ]]; then
     echo "     Then run chezmoi apply, so the work vault gets its daily notes."
   fi

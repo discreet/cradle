@@ -43,8 +43,22 @@ Commits here use the personal identity, which the check verifies.
 Something in `~` that differs from the repo (`chezmoi status`) was changed
 outside it. Ask before overwriting it, and offer to bring it into the repo.
 
-Durable decisions belong in this file, not in Claude's memory, which stays on
-one machine.
+## Memory
+
+What Claude learns while working here goes where it can reach the machines
+that need it. After each change, put anything worth keeping in one place:
+
+| What | Where |
+|---|---|
+| Decisions, rules, how to change things | This file and README.md: the only memory every machine gets, through git. Public, so nothing private |
+| Private values that differ per machine (hosts, orgs, paths) | A chezmoi question (`.chezmoi.toml.tmpl`), used through templates |
+| Private notes every machine needs (which hosts or orgs are in use, quirks of the user's accounts) | `cradle.md` in the personal Obsidian vault, backed up and cloned to each machine by `vault-sync` |
+| Lessons: what worked or failed and what to do next time | agentdb (`reflexion_store`); sessions here use the personal database |
+| Facts about one machine only, or work in progress on it | Claude Code's own project memory, which stays on that machine |
+
+Don't keep a decision or a rule in Claude Code's memory or agentdb: it would
+be missing on the next machine. When one turns up there, move it here.
+
 
 ## Commits and releases
 
@@ -191,7 +205,10 @@ are listed so they aren't proposed again without a reason.
   with a work identity) and a personal vault, each with folders Claude must
   not read (denied to its file tools, forbidden otherwise by the global
   instructions). The personal vault is unstructured and ad hoc: cradle writes
-  nothing to it, no daily notes, templates or journal. Everything below is
+  nothing to it, no daily notes, templates or journal. Obsidian doesn't sync
+  between machines; each vault is backed up to its own private git repo
+  (personal on GitHub, work on the work host) by `vault-sync`, nightly at
+  18:30 (chosen over Obsidian Sync, iCloud Drive and Time Machine). Everything below is
   the work vault only. The `journal` skill
   summarises the day's work Claude Code sessions and git commits (personal
   ones are left out) into a
