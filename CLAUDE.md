@@ -122,6 +122,10 @@ are listed so they aren't proposed again without a reason.
   towolf/vim-helm was rejected. Plugin versions come from `lazy-lock.json`.
 - **Ghostty:** built-in `Gruvbox Dark`, block cursor everywhere, both Option
   keys as Alt, SSH terminfo helper off. The first window runs `tmux-pick`.
+  Ghostty + tmux was kept over Rex (Superlogical's terminal and multiplexer)
+  on 2026-11-03, because Rex is only an invite-only beta. Possible later step:
+  when Rex has a public download, docs and a cask, compare it again using
+  README's "Terminal" section. Switching replaces tmux too, so it's breaking.
 - **tmux:** lean; prefix `C-Space`. Pane movement stays separate from Neovim's
   (vim-tmux-navigator declined; how to add it is in README's Keyboard section).
 - **Keyboard:** a standard Mac keyboard. Caps Lock is Control via `hidutil`.
