@@ -62,7 +62,8 @@ one machine.
 - **Releases are annotated, signed SemVer tags only:** `vMAJOR.MINOR.PATCH`,
   made with `git tag -a vX.Y.Z -m "<summary of the changes>"` (signed through
   `tag.gpgsign`). No lightweight tags, no version file, never move or delete a
-  pushed tag. After pushing, tag if the commits since the last tag include:
+  pushed tag unless the user explicitly asks for that tag to be moved or
+  deleted. After pushing, tag if the commits since the last tag include:
   - a breaking change → **major**: machines already set up need a manual step,
     or a habit changes (a tool or key binding removed or changed, a new or
     renamed chezmoi question);
