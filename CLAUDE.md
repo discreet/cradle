@@ -226,7 +226,7 @@ are listed so they aren't proposed again without a reason.
   up the vaults (chosen over offering first, on-demand only and local MCP
   servers with tokens). The user takes
   their own meeting notes in `## Meetings` under `### HH:MM` headings, from
-  `/journal agenda` (offered by the same hook each weekday, including in a
+  `/journal agenda` (run by the same hook each weekday without asking, including in a
   session left open overnight) or `Templates/Meeting.md`; the
   journal matches them to events by time and never edits the user's text
   (chosen over AI note-takers, attached notes docs and one note per

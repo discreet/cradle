@@ -279,7 +279,7 @@ know:
 | Connector | Access needed | What in cradle depends on it |
 |---|---|---|
 | Slack | read | The journal's `## Slack` section (conversations you were in, mentions, DMs). |
-| Google Calendar | read | The journal's `## Meetings` section and `/journal agenda` (today's meetings as headings to take notes under), the start-of-session catch-up, and the agenda offer. |
+| Google Calendar | read | The journal's `## Meetings` section and `/journal agenda` (today's meetings as headings to take notes under), and the start-of-session catch-up and agenda. |
 | Google Drive | read and write | Searching Drive from Claude, and meeting notes docs attached to calendar events, which the journal reads. Write access lets Claude create files. |
 | Google Docs | read and write | Creating and editing Docs from Claude. |
 | Google Sheets | read and write | Creating and editing Sheets from Claude. |
@@ -355,9 +355,9 @@ or MCP server:
   meetings") puts today's Google Calendar events into `## Meetings` as
   `### 10:00 Title (with who)` headings; type your notes under them, or start
   one with the Meeting template for a meeting that isn't there. Running it
-  again adds only new events. On weekdays, Claude offers it once a day: when
-  you start it, or at your first message of the day in a session left open
-  overnight.
+  again adds only new events. On weekdays, Claude does it once a day without
+  asking, saying so in one line: when you start it, or at your first message
+  of the day in a session left open overnight.
 - `/journal [YYYY-MM-DD]` writes that day's daily note sections:
   `## Meetings` (that day's Google Calendar events matched to your notes by
   time, your notes kept as written, plus a short summary under each and your
@@ -379,7 +379,7 @@ or MCP server:
   summarised yet (marked `%% journal %%`, hidden in reading view) or its
   Slack section is empty, Claude says in one line that it's catching up and
   fills them in, without asking, then backs up the vaults. The same hook
-  offers today's agenda (that one waits for a yes).
+  adds today's agenda the same way.
 - `journal-data [YYYY-MM-DD]` prints what the summary is built from: your
   prompts and Claude's replies (shortened) in work sessions and your commits
   in work git repos up to four folders below home, judged by `is-work`. Shell history is not used.
