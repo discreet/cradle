@@ -14,3 +14,7 @@ scripts
 .local/bin/journal-check
 Library/LaunchAgents/local.obsidian-journal.plist
 {{- end }}
+{{- if not (or .workVaultRepo .personalVaultRepo) }}
+.local/bin/vault-sync
+Library/LaunchAgents/local.vault-sync.plist
+{{- end }}

@@ -33,7 +33,7 @@ have() { command -v "$1" >/dev/null; }
 # Rendered three times: work on github.com beside personal, under two orgs,
 # with both Obsidian vaults (most checks use this one); work on its own host,
 # with no vaults; and no work identity, with only a personal vault.
-setup() { # setup <name> <work email> <work host> <work orgs> [work vault] [its private folders] [work folders] [personal vault] [its private folders]
+setup() { # setup <name> <work email> <work host> <work orgs> [work vault] [its private folders] [work folders] [personal vault] [its private folders] [work vault repo] [personal vault repo]
   mkdir -p "$tmp/$1"
   cat >"$tmp/$1.toml" <<EOF
 sourceDir = "$repo"
@@ -48,11 +48,13 @@ sourceDir = "$repo"
   workFolders = "${7:-}"
   personalVault = "${8:-}"
   personalVaultPrivate = "${9:-}"
+  workVaultRepo = "${10:-}"
+  personalVaultRepo = "${11:-}"
 EOF
 }
-vault=$tmp/vault pvault=$tmp/personal-vault
+vault=$tmp/vault pvault=$tmp/personal-vault remotes=$tmp/remotes
 setup home work@example.com github.com "Example-Org other-org" "$vault" "Team Stuff; Private/HR/" \
-  "$tmp/work;$tmp/clients b" "$pvault" "Diary/"
+  "$tmp/work;$tmp/clients b" "$pvault" "Diary/" "$remotes/work.git" "$remotes/personal.git"
 setup home-selfhosted work@example.com git.example.com ""
 setup home-personal "" "" "" "" "" "" "$pvault"
 home2=$tmp/home-personal
@@ -156,6 +158,9 @@ personal_vault_only() { # no journal, hooks or daily notes; the vault is still C
     .local/bin/journal-check \
     Library/LaunchAgents/local.obsidian-journal.plist; do
     [[ ! -e $h/$f ]] || { echo "installed without a work vault: $f"; bad=1; }
+  done
+  for f in .local/bin/vault-sync Library/LaunchAgents/local.vault-sync.plist; do
+    [[ ! -e $h/$f ]] || { echo "installed without a vault repo: $f"; bad=1; }
   done
   grep -qF "personal Obsidian vault is \`$pvault\`" "$h/.config/claude/CLAUDE.md" || { echo "CLAUDE.md doesn't name the vault"; bad=1; }
   ! grep -qe 'journal. skill' -e 'Daily notes' "$h/.config/claude/CLAUDE.md" || { echo "CLAUDE.md mentions the journal"; bad=1; }
@@ -261,6 +266,11 @@ journal_data() { # today's work sessions and commits only, without the evening r
   git -C "$j/home/code/mine" -c user.email=personal@example.com -c user.name=Me -c commit.gpgsign=false \
     commit -q --allow-empty -m "feat: personal commit"
   git -C "$j/home/code/mine" config user.email personal@example.com
+  mkdir -p "$j/home/notes/.obsidian"
+  git -C "$j/home/notes" init -q
+  git -C "$j/home/notes" -c user.email=work@example.com -c user.name=Me -c commit.gpgsign=false \
+    commit -q --allow-empty -m "Vault backup now"
+  git -C "$j/home/notes" config user.email work@example.com
   git -C "$j/home/code/app" init -q
   git -C "$j/home/code/app" -c user.email=work@example.com -c user.name=Me -c commit.gpgsign=false \
     commit -q --allow-empty -m "feat: login page"
@@ -270,10 +280,51 @@ journal_data() { # today's work sessions and commits only, without the evening r
   if ! grep -q '^user: add a login page$' <<<"$out" ||
     ! grep -q '^claude: Added the login page.$' <<<"$out" ||
     ! grep -q ' feat: login page$' <<<"$out" ||
-    grep -qe 'from yesterday' -e 'noise' -e 'evening run' -e 'personal' <<<"$out"; then
+    grep -qe 'from yesterday' -e 'noise' -e 'evening run' -e 'personal' -e 'Vault backup' <<<"$out"; then
     echo "$out"
     return 1
   fi
+}
+vault_sync() { # clone, first backup, rebase onto another machine, conflicts, empty folder
+  local stub=$tmp/stub other=$tmp/other-machine sync=$home/.local/bin/vault-sync
+  mkdir -p "$stub" "$remotes"
+  printf '#!/bin/sh\necho "$@" >>"%s/notified"\n' "$tmp" >"$stub/osascript"
+  chmod +x "$stub/osascript"
+  printf '[user]\n  name = Me\n  email = me@example.com\n[commit]\n  gpgsign = false\n[init]\n  defaultBranch = master\n' >"$tmp/vault.gitconfig"
+  run() { GIT_CONFIG_GLOBAL=$tmp/vault.gitconfig GIT_CONFIG_NOSYSTEM=1 PATH="$stub:$PATH" "$sync" >/dev/null 2>&1; }
+  git init -q --bare -b main "$remotes/work.git"
+  git init -q --bare -b main "$remotes/personal.git"
+  rm -rf "$pvault"
+  mkdir -p "$vault/.obsidian"
+  echo '{}' >"$vault/.obsidian/workspace.json"
+  echo note >"$vault/a.md"
+  run || { echo "first run failed"; return 1; }
+  git -C "$remotes/work.git" cat-file -e main:a.md || { echo "work vault not backed up"; return 1; }
+  ! git -C "$remotes/work.git" cat-file -e main:.obsidian/workspace.json 2>/dev/null ||
+    { echo "workspace.json backed up"; return 1; }
+  [[ -d $pvault/.git ]] || { echo "personal vault not cloned"; return 1; }
+  echo one >"$pvault/note.md"
+  { run && git -C "$remotes/personal.git" cat-file -e main:note.md; } || { echo "personal vault not backed up"; return 1; }
+  # Another machine pushes; this one rebases onto it.
+  GIT_CONFIG_GLOBAL=$tmp/vault.gitconfig git clone -q "$remotes/personal.git" "$other"
+  echo theirs >"$other/theirs.md"
+  git -C "$other" add -A && GIT_CONFIG_GLOBAL=$tmp/vault.gitconfig git -C "$other" commit -q -m theirs && git -C "$other" push -q
+  echo mine >"$pvault/mine.md"
+  run || { echo "rebase run failed"; return 1; }
+  { [[ -f $pvault/theirs.md ]] && git -C "$remotes/personal.git" cat-file -e main:mine.md; } ||
+    { echo "didn't merge the other machine's changes"; return 1; }
+  # Both change the same line: stop, keep this machine's notes, notify.
+  git -C "$other" pull -q
+  echo two >"$other/note.md"
+  git -C "$other" add -A && GIT_CONFIG_GLOBAL=$tmp/vault.gitconfig git -C "$other" commit -q -m two && git -C "$other" push -q
+  echo three >"$pvault/note.md"
+  ! run || { echo "a conflict didn't fail"; return 1; }
+  [[ $(cat "$pvault/note.md") == three && ! -d $pvault/.git/rebase-merge ]] ||
+    { echo "the conflict changed the vault"; return 1; }
+  grep -q 'Vault backup failed' "$tmp/notified" || { echo "no notification"; return 1; }
+  # An empty folder (a new machine) takes the repo's notes.
+  rm -rf "$pvault" && mkdir -p "$pvault"
+  { run && [[ $(cat "$pvault/note.md") == two ]]; } || { echo "empty folder not filled"; return 1; }
 }
 ssh_host() { # ssh_host <ssh config> <alias> <expected hostname>
   local got
@@ -341,7 +392,7 @@ if [[ $failed == 1 ]]; then
 fi
 init_answers() { # renders .chezmoi.toml.tmpl with a full set of answers
   cz_new execute-template --init \
-  --promptString "Full name=Check,Personal git email (your GitHub noreply address keeps it private)=personal@example.com,Work git email (leave blank if this machine has no work identity)=work@example.com,Work git host such as gitlab.com or git.example.com=gitlab.com,Work orgs or groups exactly as in repo URLs (space-separated; blank if every repo on that host is work)=,Folders for Claude's work memory in or outside git (separated by semicolons; blank for none)=~/work; ~/clients b/,Work Obsidian vault folder for daily notes and the journal (leave blank for none)=~/Work Notes/,Work vault folders Claude must not read (separated by semicolons; blank for none)=HR,Personal Obsidian vault folder (leave blank for none)=~/Notes,Personal vault folders Claude must not read (separated by semicolons; blank for none)=" \
+  --promptString "Full name=Check,Personal git email (your GitHub noreply address keeps it private)=personal@example.com,Work git email (leave blank if this machine has no work identity)=work@example.com,Work git host such as gitlab.com or git.example.com=gitlab.com,Work orgs or groups exactly as in repo URLs (space-separated; blank if every repo on that host is work)=,Folders for Claude's work memory in or outside git (separated by semicolons; blank for none)=~/work; ~/clients b/,Work Obsidian vault folder for daily notes and the journal (leave blank for none)=~/Work Notes/,Work vault folders Claude must not read (separated by semicolons; blank for none)=HR,Personal Obsidian vault folder (leave blank for none)=~/Notes,Personal vault folders Claude must not read (separated by semicolons; blank for none)=,Private git repo on the work host to back up the work vault to (SSH URL; blank for none)=git@example.com:org/notes.git,Private git repo to back up the personal vault to (SSH URL; blank for none)=" \
   <"$repo/.chezmoi.toml.tmpl"
 }
 check "chezmoi init questions render" init_answers
@@ -441,6 +492,7 @@ check "Obsidian: a personal vault alone gets no journal" personal_vault_only
 check "Obsidian: nothing installed without a vault" no_obsidian
 check "Obsidian: Daily notes settings and template applied to the work vault" obsidian_apply
 check "Obsidian: journal-data finds the day's work sessions and commits only" journal_data
+check "Obsidian: vault-sync backs up, merges other machines, stops on conflicts" vault_sync
 check "Obsidian: sessions offer today's agenda and missing summaries, once each" journal_check
 check "JSON settings parse" jq empty "$repo"/obsidian/*.json "$home/.config/claude/settings.json" \
   "$home/.docker/config.json" "$repo/.claude/settings.json"

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Every evening at 18:30 (or on waking, if the Mac was asleep then), after the
+  journal, backs up the Obsidian vaults to their private git repos; see
+  vault-sync. Installed only when chezmoi was given a vault repo. Loaded by
+  run_onchange_after_30-launch-agents.sh.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>local.vault-sync</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>{{ .chezmoi.homeDir }}/.local/bin/vault-sync</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>18</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>{{ .chezmoi.homeDir }}/Library/Logs/vault-sync.log</string>
+  <key>StandardErrorPath</key>
+  <string>{{ .chezmoi.homeDir }}/Library/Logs/vault-sync.log</string>
+</dict>
+</plist>

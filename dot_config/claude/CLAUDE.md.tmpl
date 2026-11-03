@@ -35,7 +35,8 @@ started in, so never pick or mention a database.
 
 {{- if and .workVault .personalVault }}
 
-The user has two Obsidian vaults, plain Markdown files that Obsidian syncs:
+The user has two Obsidian vaults, plain Markdown files (each backed up
+nightly to a private git repo by `vault-sync`, when one is set):
 
 - Work: `{{ .workVault }}`, structured, with daily notes and the journal.
 - Personal: `{{ .personalVault }}`, unstructured and ad hoc.
@@ -46,12 +47,12 @@ vault is first needed), otherwise the personal one. Reach into the other
 vault only when the user asks.
 {{- else if .workVault }}
 
-The user's work Obsidian vault is `{{ .workVault }}`: plain Markdown files that
-Obsidian syncs, structured, with daily notes and the journal.
+The user's work Obsidian vault is `{{ .workVault }}`: plain Markdown files,
+structured, with daily notes and the journal.
 {{- else }}
 
 The user's personal Obsidian vault is `{{ .personalVault }}`: plain Markdown
-files that Obsidian syncs, unstructured and ad hoc.
+files, unstructured and ad hoc.
 {{- end }}
 
 Read, search and link notes in it whenever it helps, from any project.
@@ -87,6 +88,8 @@ are kept out only by this rule.
 {{- if .personalVault }}
 - The personal vault has no set structure: no daily notes or templates from
   cradle. Follow whatever the user's notes there already do, and keep work
-  content out of it.
+  content out of it. Its `cradle.md` note holds private notes about the
+  cradle setup (hosts, orgs, quirks) that every machine needs but the public
+  repo can't hold; read it when working on cradle, and add to it there.
 {{- end }}
 {{- end }}
