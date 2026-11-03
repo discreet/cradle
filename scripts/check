@@ -204,7 +204,7 @@ obsidian_apply() { # merges into existing settings, writes the template; nothing
   [[ -z $(czh home-personal execute-template <"$repo/run_onchange_after_35-obsidian.sh.tmpl" | tr -d '[:space:]') ]] ||
     { echo "the script isn't empty without a vault"; return 1; }
 }
-journal_check() { # offers today's agenda and the last weekday's missing summaries, once each
+journal_check() { # catches up the last weekday's missing summaries and offers today's agenda, once each
   local hook=$home/.local/bin/journal-check st=$tmp/journal-state day today note old out weekday=""
   today=$(date +%F)
   (($(date +%u) <= 5)) && weekday=1
@@ -228,7 +228,7 @@ journal_check() { # offers today's agenda and the last weekday's missing summari
     says "/journal agenda" "$today" "Meetings and Slack summary" "$day" || return 1
     printf '## Meetings\n### 09:00 Standup\n%%%% agenda %%%%\n' >"$note"
   fi
-  says "Meetings and Slack summary" -- "/journal agenda" || return 1
+  says "catching up the Meetings and Slack summary" "without asking" -- "/journal agenda" "offer" || return 1
   printf '## Meetings\n### 10:00 Sync\n- my notes\n\n## Slack  \n- #team: agreed on X\n' >"$old"
   says "Meetings summary" -- "Slack" || return 1
   printf '## Meetings\n### 10:00 Sync\n%%%% journal %%%%\n\n## Slack\n\n' >"$old"
@@ -516,7 +516,7 @@ check "Obsidian: Daily notes settings and template applied to the work vault" ob
 check "Obsidian: journal-data finds the day's work sessions and commits only" journal_data
 check "Obsidian: vault-sync backs up, merges other machines, stops on conflicts" vault_sync
 check "Obsidian: the evening run journals first, then backs up" evening_run
-check "Obsidian: sessions offer today's agenda and missing summaries, once each" journal_check
+check "Obsidian: sessions catch up missing summaries and offer today's agenda, once each" journal_check
 check "JSON settings parse" jq empty "$repo"/obsidian/*.json "$home/.config/claude/settings.json" \
   "$home/.docker/config.json" "$repo/.claude/settings.json"
 

@@ -95,8 +95,8 @@ or remove their text. It looks like this:
      the user.
    - A source you checked that had nothing gets one line, `- Nothing.` (in
      Meetings, keep any notes and still end with `%% journal %%`). Leave a
-     source you couldn't reach as it is: the next interactive session offers
-     to fill it.
+     source you couldn't reach as it is: the next interactive session
+     catches it up.
 7. **Update the note:** replace Terminal and Slack if the note has them (up to
    the next `## ` heading) and touch nothing else; otherwise append them.
    Merge Meetings as described above instead of replacing it.

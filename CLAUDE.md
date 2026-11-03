@@ -221,8 +221,10 @@ are listed so they aren't proposed again without a reason.
   attached meeting notes) and Slack conversations go in `## Meetings` and
   `## Slack` via the claude.ai connectors; headless `claude -p` doesn't load
   connectors (tested, 2.1.314), so a hook (`journal-check`, on SessionStart
-  and UserPromptSubmit, once a day) has the next interactive session offer to fill whichever is missing (chosen
-  over on-demand only and local MCP servers with tokens). The user takes
+  and UserPromptSubmit, once a day) has the next interactive session catch
+  up whichever is missing, saying so in one line without asking, then back
+  up the vaults (chosen over offering first, on-demand only and local MCP
+  servers with tokens). The user takes
   their own meeting notes in `## Meetings` under `### HH:MM` headings, from
   `/journal agenda` (offered by the same hook each weekday, including in a
   session left open overnight) or `Templates/Meeting.md`; the

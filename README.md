@@ -279,7 +279,7 @@ know:
 | Connector | Access needed | What in cradle depends on it |
 |---|---|---|
 | Slack | read | The journal's `## Slack` section (conversations you were in, mentions, DMs). |
-| Google Calendar | read | The journal's `## Meetings` section and `/journal agenda` (today's meetings as headings to take notes under), and the start-of-session offer for both. |
+| Google Calendar | read | The journal's `## Meetings` section and `/journal agenda` (today's meetings as headings to take notes under), the start-of-session catch-up, and the agenda offer. |
 | Google Drive | read and write | Searching Drive from Claude, and meeting notes docs attached to calendar events, which the journal reads. Write access lets Claude create files. |
 | Google Docs | read and write | Creating and editing Docs from Claude. |
 | Google Sheets | read and write | Creating and editing Sheets from Claude. |
@@ -377,8 +377,9 @@ or MCP server:
   or Slack. Instead, a hook (`journal-check`, run when Claude starts and on
   each message, checking once a day) looks at the last weekday's note; if its Meetings section isn't
   summarised yet (marked `%% journal %%`, hidden in reading view) or its
-  Slack section is empty, Claude offers once to fill them. The same hook
-  offers today's agenda.
+  Slack section is empty, Claude says in one line that it's catching up and
+  fills them in, without asking, then backs up the vaults. The same hook
+  offers today's agenda (that one waits for a yes).
 - `journal-data [YYYY-MM-DD]` prints what the summary is built from: your
   prompts and Claude's replies (shortened) in work sessions and your commits
   in work git repos up to four folders below home, judged by `is-work`. Shell history is not used.
