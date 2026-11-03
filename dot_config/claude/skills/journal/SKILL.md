@@ -1,6 +1,6 @@
 ---
 name: journal
-description: Write or refresh the "Meetings", "Terminal" and "Slack" sections of an Obsidian daily note, summarising a day's Google Calendar meetings (with the user's own notes), Claude Code sessions, git commits and the Slack conversations the user took part in or was mentioned in. Also adds today's meetings to the note as headings to take notes under (`/journal agenda`). Use when the user asks to journal, log or summarise their day (or a given date) into Obsidian, or to add today's meetings or agenda to their daily note; the evening LaunchAgent also runs it.
+description: Write or refresh the "Meetings", "Terminal" and "Slack" sections of a daily note in the user's work Obsidian vault, summarising a day's Google Calendar meetings (with the user's own notes), work Claude Code sessions, work git commits and the Slack conversations the user took part in or was mentioned in. Also adds today's meetings to the note as headings to take notes under (`/journal agenda`). Use when the user asks to journal, log or summarise their day (or a given date) into Obsidian, or to add today's meetings or agenda to their daily note; the evening LaunchAgent also runs it.
 ---
 
 # Journal
@@ -57,9 +57,10 @@ or remove their text. It looks like this:
 ## Summary
 
 1. **Day:** today, unless the user names a date. Use `YYYY-MM-DD`.
-2. **Terminal:** run `journal-data <day>`. It prints each Claude Code session
-   of that day (folder, the user's prompts and Claude's replies, shortened)
-   and the user's commits in their git repos.
+2. **Terminal:** run `journal-data <day>`. It prints each work Claude Code
+   session of that day (folder, the user's prompts and Claude's replies,
+   shortened) and the user's commits in work git repos. Personal sessions
+   and repos are left out on purpose; never add them.
 3. **Slack**, only if Slack tools (`mcp__claude_ai_Slack__*`) are available;
    otherwise leave Slack out and say so. With `slack_search_public_and_private`
    (`sort: timestamp`, `response_format: concise`, following `cursor` until
@@ -108,7 +109,8 @@ location) and blocks with no other guests (focus time).
 
 ## Finding or creating the note
 
-The vault is named in your global instructions. Read
+The work vault is named in your global instructions; the journal is only
+ever written there, never to the personal vault. Read
 `<vault>/.obsidian/daily-notes.json` if it exists: `folder` is where daily
 notes live (default: the vault root) and `format` is the file name as a
 Moment.js date format (default `YYYY-MM-DD`). If the note doesn't exist,

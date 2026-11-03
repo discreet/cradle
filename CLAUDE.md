@@ -94,7 +94,7 @@ and every tag.
 | A Neovim plugin | `dot_config/nvim/lua/plugins/`; then `chezmoi re-add ~/.config/nvim/lazy-lock.json` after it installs. Its language server goes in mise and `vim.lsp.enable` in `plugins/lsp.lua` |
 | Claude Code settings, plugins, MCP servers | see the Claude Code section of README.md |
 | Anything that only works through a claude.ai connector (Slack, Google, Atlassian...) | the feature where it belongs, plus a row in README's "claude.ai connectors" table: the connector, the access it needs, and what depends on it. Connectors aren't loaded in headless `claude -p` runs, so design for the next interactive session |
-| Obsidian settings or vault templates | `obsidian/`, applied to the vault by `run_onchange_after_35-obsidian.sh.tmpl` (JSON settings are merged into the vault's `.obsidian/` files) |
+| Obsidian settings or vault templates | `obsidian/`, applied to the work vault by `run_onchange_after_35-obsidian.sh.tmpl` (JSON settings are merged into the vault's `.obsidian/` files) |
 | A file in the repo that must not land in `~` | `.chezmoiignore` (names starting with `.` are skipped already) |
 
 ## Decisions
@@ -176,11 +176,18 @@ are listed so they aren't proposed again without a reason.
   so they'd run the `agentdb` CLI on the same database (reuse
   `agentdb-mcp`'s work/personal choice); first check the CLI covers recall
   and store.
-- **Obsidian:** Claude uses the vault as plain files (an extra working
-  folder), not through an MCP server or plugin. Each machine is asked for the
-  vault path and folders Claude must not read (denied to its file tools,
-  forbidden otherwise by the global instructions). The `journal` skill
-  summarises the day's Claude Code sessions and git commits into a
+- **Obsidian:** two vaults, work and personal (chosen over one shared
+  vault). Claude uses both as plain files (extra working folders), not
+  through an MCP server or plugin, and its instructions say to use the one
+  matching the session (`is-work`, the same rule as agentdb) and reach into
+  the other only when asked. Each machine is asked for a work vault (only
+  with a work identity) and a personal vault, each with folders Claude must
+  not read (denied to its file tools, forbidden otherwise by the global
+  instructions). The personal vault is unstructured and ad hoc: cradle writes
+  nothing to it, no daily notes, templates or journal. Everything below is
+  the work vault only. The `journal` skill
+  summarises the day's work Claude Code sessions and git commits (personal
+  ones are left out) into a
   `## Terminal` section of the daily note, run by a LaunchAgent every evening
   at 18:00. Meetings (Google Calendar, plus decisions and action items from
   attached meeting notes) and Slack conversations go in `## Meetings` and

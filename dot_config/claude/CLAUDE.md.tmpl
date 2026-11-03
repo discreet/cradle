@@ -29,15 +29,39 @@ started in, so never pick or mention a database.
 - Skip both for quick questions, lookups and one-line edits, and in
   scheduled headless runs such as the journal. If agentdb isn't connected,
   carry on without it.
-{{- if .obsidianVault }}
+{{- if or .workVault .personalVault }}
 
 # Obsidian
 
-The user's Obsidian vault is `{{ .obsidianVault }}`: plain Markdown files that
-Obsidian syncs. Read, search and link notes there whenever it helps, from any
-project.
+{{- if and .workVault .personalVault }}
+
+The user has two Obsidian vaults, plain Markdown files that Obsidian syncs:
+
+- Work: `{{ .workVault }}`, structured, with daily notes and the journal.
+- Personal: `{{ .personalVault }}`, unstructured and ad hoc.
+
+Use the vault that matches the session: the work vault when the folder the
+session started in is work (`is-work <folder>` exits 0; check once, when a
+vault is first needed), otherwise the personal one. Reach into the other
+vault only when the user asks.
+{{- else if .workVault }}
+
+The user's work Obsidian vault is `{{ .workVault }}`: plain Markdown files that
+Obsidian syncs, structured, with daily notes and the journal.
+{{- else }}
+
+The user's personal Obsidian vault is `{{ .personalVault }}`: plain Markdown
+files that Obsidian syncs, unstructured and ad hoc.
+{{- end }}
+
+Read, search and link notes in it whenever it helps, from any project.
 {{- $private := list }}
-{{- range splitList ";" .obsidianPrivate }}{{ $f := trim . | trimSuffix "/" }}{{ if $f }}{{ $private = append $private $f }}{{ end }}{{ end }}
+{{- range list (list .workVault .workVaultPrivate) (list .personalVault .personalVaultPrivate) }}
+{{-   $vault := index . 0 }}
+{{-   if $vault }}
+{{-     range splitList ";" (index . 1) }}{{ $f := trim . | trimSuffix "/" }}{{ if $f }}{{ $private = append $private (printf "%s/%s" $vault $f) }}{{ end }}{{ end }}
+{{-   end }}
+{{- end }}
 {{- if $private }}
 
 Never read these folders, with file tools, `grep`, `cat` or any other
@@ -52,9 +76,17 @@ are kept out only by this rule.
   frontmatter) where notes use them, attachments where the vault keeps them.
 - Add or edit notes when asked, or when a skill says to. Never move, rename or
   delete notes, or change `.obsidian/`, without asking.
-- The Daily notes and Templates settings and `Templates/Daily.md` are managed
-  from the cradle repo's `obsidian/` folder; change them there, not in the
-  vault.
-- The `journal` skill writes the day's Claude Code sessions and git commits
-  into the daily note; a LaunchAgent runs it every evening at 18:00.
+{{- if .workVault }}
+- In the work vault, the Daily notes and Templates settings and its
+  templates are managed from the cradle repo's `obsidian/` folder; change
+  them there, not in the vault.
+- The `journal` skill writes the day's work Claude Code sessions and git
+  commits into the work vault's daily note; a LaunchAgent runs it every
+  evening at 18:00.
+{{- end }}
+{{- if .personalVault }}
+- The personal vault has no set structure: no daily notes or templates from
+  cradle. Follow whatever the user's notes there already do, and keep work
+  content out of it.
+{{- end }}
 {{- end }}

@@ -10,26 +10,36 @@
 {{- end -}}
 {{- $managed := includeTemplate "claude-settings.json" . | fromJson -}}
 {{- /*
-  The Obsidian vault is a working folder in every session; Claude's file
-  tools can't read or edit the folders named as private; and each session
-  starts, and each prompt, checks for today's agenda and missing Meetings or
-  Slack summaries (journal-check; once a day, so later prompts cost nothing).
+  Both Obsidian vaults are working folders in every session; Claude's file
+  tools can't read or edit the folders named as private in either. With a
+  work vault, each session start and each prompt checks for today's agenda
+  and missing Meetings or Slack summaries (journal-check; once a day, so
+  later prompts cost nothing).
 */ -}}
-{{- if .obsidianVault -}}
-{{-   $_ := set $managed.permissions "additionalDirectories" (list .obsidianVault) -}}
+{{- $vaults := list -}}
+{{- $deny := list -}}
+{{- range list (list .workVault .workVaultPrivate) (list .personalVault .personalVaultPrivate) -}}
+{{-   $vault := index . 0 -}}
+{{-   if $vault -}}
+{{-     $vaults = append $vaults $vault -}}
+{{-     range splitList ";" (index . 1) -}}
+{{-       $folder := trim . | trimSuffix "/" -}}
+{{-       if $folder -}}
+{{-         $path := printf "/%s/%s/**" $vault $folder -}}
+{{-         $deny = concat $deny (list (printf "Read(%s)" $path) (printf "Edit(%s)" $path)) -}}
+{{-       end -}}
+{{-     end -}}
+{{-   end -}}
+{{- end -}}
+{{- if $vaults -}}
+{{-   $_ := set $managed.permissions "additionalDirectories" $vaults -}}
+{{- end -}}
+{{- if $deny -}}
+{{-   $_ := set $managed.permissions "deny" $deny -}}
+{{- end -}}
+{{- if .workVault -}}
 {{-   $check := dict "type" "command" "command" (joinPath .chezmoi.homeDir ".local/bin/journal-check") -}}
 {{-   $on := list (dict "hooks" (list $check)) -}}
 {{-   $_ := set $managed "hooks" (dict "SessionStart" $on "UserPromptSubmit" $on) -}}
-{{-   $deny := list -}}
-{{-   range splitList ";" .obsidianPrivate -}}
-{{-     $folder := trim . | trimSuffix "/" -}}
-{{-     if $folder -}}
-{{-       $path := printf "/%s/%s/**" $.obsidianVault $folder -}}
-{{-       $deny = concat $deny (list (printf "Read(%s)" $path) (printf "Edit(%s)" $path)) -}}
-{{-     end -}}
-{{-   end -}}
-{{-   if $deny -}}
-{{-     $_ := set $managed.permissions "deny" $deny -}}
-{{-   end -}}
 {{- end -}}
 {{- mergeOverwrite $live $managed | toPrettyJson "  " }}

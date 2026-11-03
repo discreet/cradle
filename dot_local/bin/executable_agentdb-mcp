@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Claude Code's agentdb MCP server (registered by run_onchange_after_45-claude-mcp).
+# Work and personal memories stay apart. Claude Code starts this in the
+# session's folder; is-work decides whether that's work (work.db) or
+# personal (personal.db).
+set -euo pipefail
+
+db=personal
+if "$(dirname "$0")/is-work"; then db=work; fi
+AGENTDB_PATH="$HOME/.local/share/agentdb/$db.db" exec agentdb mcp start

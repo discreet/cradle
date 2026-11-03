@@ -7,7 +7,7 @@ scripts
 {{- if not .workEmail }}
 .config/git/work
 {{- end }}
-{{- if not .obsidianVault }}
+{{- if not .workVault }}
 .config/claude/skills/journal
 .local/bin/journal-data
 .local/bin/obsidian-journal
