@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code hook for the Obsidian journal, run at SessionStart and on every
+# Claude Code hook for the work vault's journal, run at SessionStart and on every
 # prompt (UserPromptSubmit), so a session left open overnight gets the next
 # morning's offer too. Asks Claude to offer, once each:
 # - on a weekday, to add today's meetings to today's daily note (as headings
@@ -11,7 +11,7 @@
 # evening run itself is left alone.
 set -euo pipefail
 
-vault={{ .obsidianVault | quote }}
+vault={{ .workVault | quote }}
 state="${XDG_STATE_HOME:-$HOME/.local/state}/cradle/journal"
 read -r today weekday < <(date '+%F %u')
 back=1 # to the last weekday: Monday -> Friday, Sunday -> Friday

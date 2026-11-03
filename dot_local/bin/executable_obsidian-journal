@@ -15,5 +15,5 @@ fi
 dir="${XDG_STATE_HOME:-$HOME/.local/state}/cradle/journal"
 mkdir -p "$dir"
 cd "$dir"
-claude -p "Use the journal skill to write today's summary into my Obsidian daily note." \
+claude -p "Use the journal skill to write today's summary into my work Obsidian daily note." \
   --permission-mode acceptEdits --allowedTools "Bash(journal-data *)"

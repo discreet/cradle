@@ -22,11 +22,23 @@
 {{-     fail "Personal repos are on github.com, so a github.com work identity needs its orgs." -}}
 {{-   end -}}
 {{- end -}}
-{{- $obsidianVault := promptStringOnce . "obsidianVault" "Obsidian vault folder for Claude (leave blank for none)" -}}
-{{- $obsidianPrivate := "" -}}
-{{- if $obsidianVault -}}
-{{-   $obsidianVault = regexReplaceAll "^~" $obsidianVault .chezmoi.homeDir | trimSuffix "/" -}}
-{{-   $obsidianPrivate = promptStringOnce . "obsidianPrivate" "Vault folders Claude must not read (separated by semicolons; blank for none)" -}}
+{{- /* Obsidian: a structured work vault (daily notes, journal), asked only with a
+       work identity, and an unstructured personal vault. The work vault was
+       once the only one, "obsidianVault"; its answers carry over as defaults. */ -}}
+{{- $workVault := "" -}}
+{{- $workVaultPrivate := "" -}}
+{{- if $workEmail -}}
+{{-   $workVault = promptStringOnce . "workVault" "Work Obsidian vault folder for daily notes and the journal (leave blank for none)" (get . "obsidianVault" | default "") -}}
+{{-   if $workVault -}}
+{{-     $workVault = regexReplaceAll "^~" $workVault .chezmoi.homeDir | trimSuffix "/" -}}
+{{-     $workVaultPrivate = promptStringOnce . "workVaultPrivate" "Work vault folders Claude must not read (separated by semicolons; blank for none)" (get . "obsidianPrivate" | default "") -}}
+{{-   end -}}
+{{- end -}}
+{{- $personalVault := promptStringOnce . "personalVault" "Personal Obsidian vault folder (leave blank for none)" -}}
+{{- $personalVaultPrivate := "" -}}
+{{- if $personalVault -}}
+{{-   $personalVault = regexReplaceAll "^~" $personalVault .chezmoi.homeDir | trimSuffix "/" -}}
+{{-   $personalVaultPrivate = promptStringOnce . "personalVaultPrivate" "Personal vault folders Claude must not read (separated by semicolons; blank for none)" -}}
 {{- end -}}
 
 # Remembers where the repo was cloned, so later commands find it from anywhere.
@@ -39,8 +51,10 @@ sourceDir = {{ .chezmoi.sourceDir | quote }}
   workHost = {{ $workHost | quote }}
   workOrgs = {{ $workOrgs | quote }}
   workFolders = {{ $workFolders | quote }}
-  obsidianVault = {{ $obsidianVault | quote }}
-  obsidianPrivate = {{ $obsidianPrivate | quote }}
+  workVault = {{ $workVault | quote }}
+  workVaultPrivate = {{ $workVaultPrivate | quote }}
+  personalVault = {{ $personalVault | quote }}
+  personalVaultPrivate = {{ $personalVaultPrivate | quote }}
 
 [edit]
   command = "nvim"

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# is-work [DIR]: exits 0 when DIR (default: here) is work, 1 when personal.
+# Work means git's identity there is the work one (set by the repo's remote,
+# see ~/.config/git/config) or DIR is inside one of the work folders given to
+# chezmoi. Used by agentdb-mcp (which memory), journal-data (what the work
+# journal includes) and Claude (which Obsidian vault).
+set -uo pipefail
+
+work={{ .workEmail | quote }}
+work_folders=({{ range splitList ";" .workFolders }}{{ if . }}{{ quote . }} {{ end }}{{ end }})
+[[ -n $work ]] || exit 1
+dir=${1:-.}
+# A folder that's gone (an old session's) is still matched by its path.
+here=$(cd "$dir" 2>/dev/null && pwd -P) || here=$dir
+[[ $(git -C "$here" config user.email 2>/dev/null) == "$work" ]] && exit 0
+for f in "${work_folders[@]}"; do
+  f=$(cd "$f" 2>/dev/null && pwd -P) || continue
+  [[ $here == "$f" || $here == "$f"/* ]] && exit 0
+done
+exit 1
