@@ -49,6 +49,15 @@ if [[ -n $work_email && ! -f ~/.ssh/id_ed25519_work ]]; then
   chezmoi apply
 fi
 
+# The folder layout (README's Folders): work/ only with a work identity, and
+# each vault folder given to chezmoi, ready to open in Obsidian as a vault.
+folders=(~/Documents/personal/code)
+[[ -n $work_email ]] && folders+=(~/Documents/work/code)
+while IFS= read -r vault || [[ -n $vault ]]; do
+  [[ -n $vault ]] && folders+=("$vault")
+done < <(chezmoi execute-template $'{{ .workVault }}\n{{ .personalVault }}')
+mkdir -p "${folders[@]}"
+
 brew_bash="$HOMEBREW_PREFIX/bin/bash"
 if ! grep -qxF "$brew_bash" /etc/shells; then
   echo "$brew_bash" | sudo tee -a /etc/shells >/dev/null
@@ -80,3 +89,9 @@ cat <<DONE
   2. Open Ghostty.
   3. Sign in to Claude Code: claude auth login
 DONE
+if [[ -n $(chezmoi execute-template '{{ .workVault }}{{ .personalVault }}') ]]; then
+  echo "  4. In Obsidian, open each vault folder you gave (Open folder as vault)."
+  if [[ -n $(chezmoi execute-template '{{ .workVault }}') ]]; then
+    echo "     Then run chezmoi apply, so the work vault gets its daily notes."
+  fi
+fi
