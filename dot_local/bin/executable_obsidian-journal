@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
-# Run every evening by the local.obsidian-journal LaunchAgent: if anything
-# happened today, Claude writes the day's summary into today's daily note with
-# the journal skill. Log: ~/Library/Logs/obsidian-journal.log.
+# Run every evening at 18:00 by the local.obsidian-journal LaunchAgent: if
+# anything happened at work today, Claude writes the day's summary into today's
+# daily note with the journal skill; then vault-sync backs up the vaults, so
+# the backup includes the summary. Log: ~/Library/Logs/obsidian-journal.log.
 set -euo pipefail
 
 # launchd's PATH is minimal: mise's shims (claude), ~/.local/bin and Apple's git.
 PATH="${MISE_DATA_DIR:-$HOME/.local/share/mise}/shims:$HOME/.local/bin:/Library/Developer/CommandLineTools/usr/bin:/usr/bin:/bin"
 echo "== $(date)"
-if ! journal-data | grep -q '^## '; then
+if journal-data | grep -q '^## '; then
+  # journal-data leaves out sessions in this folder, so this run isn't journaled.
+  dir="${XDG_STATE_HOME:-$HOME/.local/state}/cradle/journal"
+  mkdir -p "$dir"
+  (cd "$dir" && claude -p "Use the journal skill to write today's summary into my work Obsidian daily note. Don't run vault-sync; this run backs up the vaults after you." \
+    --permission-mode acceptEdits --allowedTools "Bash(journal-data *)") || echo "The journal run failed."
+else
   echo "Nothing happened today."
-  exit 0
 fi
-# journal-data leaves out sessions in this folder, so this run isn't journaled.
-dir="${XDG_STATE_HOME:-$HOME/.local/state}/cradle/journal"
-mkdir -p "$dir"
-cd "$dir"
-claude -p "Use the journal skill to write today's summary into my work Obsidian daily note." \
-  --permission-mode acceptEdits --allowedTools "Bash(journal-data *)"
+# Back up the vaults once today's note is written (installed with a vault repo).
+if command -v vault-sync >/dev/null; then vault-sync; fi

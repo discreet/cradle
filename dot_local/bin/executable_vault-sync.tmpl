@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Backs up each Obsidian vault to its private git repo (chezmoi's workVaultRepo
-# and personalVaultRepo), run every evening by the local.vault-sync LaunchAgent
-# and by hand after setting up a machine. For each vault:
+# and personalVaultRepo). Runs every evening at 18:00, from the journal's run
+# once it has written the note (obsidian-journal) or, without a work vault,
+# from the local.vault-sync LaunchAgent; after the journal skill fills in a
+# day's summaries in a session; and by hand after setting up a machine. For
+# each vault:
 # - no folder yet: clone the repo into it (a new machine);
 # - a folder that isn't a repo yet: start one and push it (the first backup);
 # - otherwise: commit what changed, pull (rebasing onto other machines'

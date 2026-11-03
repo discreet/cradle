@@ -56,7 +56,7 @@ vault=$tmp/vault pvault=$tmp/personal-vault remotes=$tmp/remotes
 setup home work@example.com github.com "Example-Org other-org" "$vault" "Team Stuff; Private/HR/" \
   "$tmp/work;$tmp/clients b" "$pvault" "Diary/" "$remotes/work.git" "$remotes/personal.git"
 setup home-selfhosted work@example.com git.example.com ""
-setup home-personal "" "" "" "" "" "" "$pvault"
+setup home-personal "" "" "" "" "" "" "$pvault" "" "" "$remotes/personal.git"
 home2=$tmp/home-personal
 home3=$tmp/home-selfhosted
 czh() { # czh <name> <chezmoi args...>
@@ -132,7 +132,7 @@ claude_merge() { # managed Claude settings merge over a live file and keep its k
   mkdir -p "${live%/*}"
   echo '{"model":"opus","theme":"dark","permissions":{"allow":["Bash(ls *)"]}}' >"$live"
   out=$(HOME=$tmp/merge chezmoi --config "$tmp/home.toml" --persistent-state "$tmp/merge.boltdb" cat "$live") || return 1
-  jq -e '.model == "opus" and .theme == "auto" and .permissions.allow == ["Bash(ls *)"]
+  jq -e '.model == "opus" and .theme == "auto" and .permissions.allow == ["Bash(ls *)", "Bash(vault-sync)"]
     and (.permissions.ask | length > 0)' <<<"$out" >/dev/null || { echo "$out"; return 1; }
 }
 obsidian_settings() {
@@ -160,17 +160,20 @@ personal_vault_only() { # no journal, hooks or daily notes; the vault is still C
     [[ ! -e $h/$f ]] || { echo "installed without a work vault: $f"; bad=1; }
   done
   for f in .local/bin/vault-sync Library/LaunchAgents/local.vault-sync.plist; do
-    [[ ! -e $h/$f ]] || { echo "installed without a vault repo: $f"; bad=1; }
+    [[ -e $h/$f ]] || { echo "not installed with a personal vault repo: $f"; bad=1; }
   done
   grep -qF "personal Obsidian vault is \`$pvault\`" "$h/.config/claude/CLAUDE.md" || { echo "CLAUDE.md doesn't name the vault"; bad=1; }
   ! grep -qe 'journal. skill' -e 'Daily notes' "$h/.config/claude/CLAUDE.md" || { echo "CLAUDE.md mentions the journal"; bad=1; }
-  jq -e --arg p "$pvault" '.permissions.additionalDirectories == [$p] and .hooks == null and .permissions.deny == null' \
+  jq -e --arg p "$pvault" '.permissions.additionalDirectories == [$p] and .hooks == null and .permissions.deny == null
+    and .permissions.allow == ["Bash(vault-sync)"]' \
     "$h/.config/claude/settings.json" >/dev/null || { echo "settings: wrong vault access or hooks"; bad=1; }
   return "$bad"
 }
 no_obsidian() {
-  local h=$tmp/home-selfhosted bad=0
-  [[ ! -e $h/.local/bin/journal-data ]] || { echo "journal installed without a vault"; bad=1; }
+  local h=$tmp/home-selfhosted bad=0 f
+  for f in .local/bin/journal-data .local/bin/vault-sync Library/LaunchAgents/local.vault-sync.plist; do
+    [[ ! -e $h/$f ]] || { echo "installed without a vault: $f"; bad=1; }
+  done
   ! grep -q Obsidian "$h/.config/claude/CLAUDE.md" || { echo "CLAUDE.md mentions Obsidian"; bad=1; }
   jq -e '.permissions.additionalDirectories == null and .hooks == null' \
     "$h/.config/claude/settings.json" >/dev/null || { echo "settings add a vault or hooks"; bad=1; }
@@ -325,6 +328,25 @@ vault_sync() { # clone, first backup, rebase onto another machine, conflicts, em
   # An empty folder (a new machine) takes the repo's notes.
   rm -rf "$pvault" && mkdir -p "$pvault"
   { run && [[ $(cat "$pvault/note.md") == two ]]; } || { echo "empty folder not filled"; return 1; }
+}
+evening_run() { # the journal (only when there's work to journal), then the backup
+  local e=$tmp/evening log=$tmp/evening/order
+  mkdir -p "$e/.local/bin" "$e/.local/share/mise/shims"
+  [[ ! -e $home/Library/LaunchAgents/local.vault-sync.plist ]] ||
+    { echo "its own vault-sync agent beside the journal's"; return 1; }
+  # The stubs expand $2 and $WORK when they run, not here.
+  # shellcheck disable=SC2016
+  printf '#!/bin/sh\necho claude "$2" >>"%s"\n' "$log" >"$e/.local/share/mise/shims/claude"
+  printf '#!/bin/sh\necho vault-sync >>"%s"\n' "$log" >"$e/.local/bin/vault-sync"
+  # shellcheck disable=SC2016
+  printf '#!/bin/sh\n[ -n "$WORK" ] && echo "## ~/code"\nexit 0\n' >"$e/.local/bin/journal-data"
+  chmod +x "$e"/.local/bin/* "$e/.local/share/mise/shims/claude"
+  HOME=$e XDG_STATE_HOME=$e/state "$home/.local/bin/obsidian-journal" >/dev/null || return 1
+  [[ $(cat "$log") == vault-sync ]] || { echo "quiet day:"; cat "$log"; return 1; }
+  rm "$log"
+  HOME=$e XDG_STATE_HOME=$e/state WORK=1 "$home/.local/bin/obsidian-journal" >/dev/null || return 1
+  [[ $(head -1 "$log") == claude*"Don't run vault-sync"* && $(sed -n 2p "$log") == vault-sync ]] ||
+    { echo "work day:"; cat "$log"; return 1; }
 }
 ssh_host() { # ssh_host <ssh config> <alias> <expected hostname>
   local got
@@ -493,6 +515,7 @@ check "Obsidian: nothing installed without a vault" no_obsidian
 check "Obsidian: Daily notes settings and template applied to the work vault" obsidian_apply
 check "Obsidian: journal-data finds the day's work sessions and commits only" journal_data
 check "Obsidian: vault-sync backs up, merges other machines, stops on conflicts" vault_sync
+check "Obsidian: the evening run journals first, then backs up" evening_run
 check "Obsidian: sessions offer today's agenda and missing summaries, once each" journal_check
 check "JSON settings parse" jq empty "$repo"/obsidian/*.json "$home/.config/claude/settings.json" \
   "$home/.docker/config.json" "$repo/.claude/settings.json"

@@ -37,6 +37,14 @@
 {{- if $deny -}}
 {{-   $_ := set $managed.permissions "deny" $deny -}}
 {{- end -}}
+{{- /* vault-sync runs without asking (the journal runs it), added to the user's own allow list. */ -}}
+{{- if or .workVaultRepo .personalVaultRepo -}}
+{{-   $allow := list -}}
+{{-   if hasKey $live "permissions" -}}
+{{-     $allow = get $live.permissions "allow" | default list -}}
+{{-   end -}}
+{{-   $_ := set $managed.permissions "allow" (append $allow "Bash(vault-sync)" | uniq) -}}
+{{- end -}}
 {{- if .workVault -}}
 {{-   $check := dict "type" "command" "command" (joinPath .chezmoi.homeDir ".local/bin/journal-check") -}}
 {{-   $on := list (dict "hooks" (list $check)) -}}
