@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Claude Code hook for the work vault's journal, run at SessionStart and on every
 # prompt (UserPromptSubmit), so a session left open overnight gets the next
-# morning's too. Once each:
-# - catches up: if the last weekday's Meetings or Slack summary is missing,
-#   Claude says it's catching up and fills them in without asking (then backs
-#   up the vaults). Those come from claude.ai connectors (Google Calendar,
-#   Slack), which headless runs like the evening journal can't use;
-# - on a weekday, offers to add today's meetings to today's daily note (as
-#   headings to take notes under), if they aren't there yet.
+# morning's too. Once each, Claude says in one line what it's doing and does
+# it without asking:
+# - catches up the last weekday's Meetings or Slack summary, if missing (then
+#   backs up the vaults). Those come from claude.ai connectors (Google
+#   Calendar, Slack), which headless runs like the evening journal can't use;
+# - on a weekday, adds today's meetings to today's daily note (as headings to
+#   take notes under), if they aren't there yet.
 # Each day is checked once, so later prompts return after two file tests. The
 # evening run itself is left alone.
 set -euo pipefail
@@ -34,14 +34,13 @@ has() {
     $0 ~ head { s = 1; next } /^## / { s = 0 } s && $0 ~ want { found = 1 }
     END { exit !found }' "$1"
 }
-offers=()
-catchup=""
+tasks=()
 mkdir -p "$state"
 
 if [[ -n $agenda ]]; then
   touch "$state/agenda-checked-$today"
   has "$(note "$today")" Meetings '%% (agenda|journal) %%' ||
-    offers+=("to add today's meetings ($today) to the daily note with /journal agenda, so the user can take notes under them")
+    tasks+=("add today's meetings ($today) to the daily note as headings to take notes under, with the journal skill's agenda mode")
 fi
 if [[ ! -e $state/checked-$day ]]; then
   touch "$state/checked-$day"
@@ -50,15 +49,13 @@ if [[ ! -e $state/checked-$day ]]; then
   has "$(note "$day")" Slack '[^[:space:]]' || missing+=(Slack)
   if ((${#missing[@]})); then
     what=${missing[*]}
-    catchup="the ${what/ / and } summary for $day"
+    tasks+=("catch up the ${what/ / and } summary for $day with the journal skill (the evening run can't reach claude.ai connectors)")
   fi
 fi
 
-[[ -n $catchup || ${#offers[@]} -gt 0 ]] || exit 0
+((${#tasks[@]})) || exit 0
 when="in your first reply"
 [[ $event == SessionStart ]] || when="after handling the user's message"
-text="Obsidian journal, $when:"
-[[ -z $catchup ]] || text+=" without asking, tell the user in one line that you're catching up $catchup, then fill it in with the journal skill (the evening run can't reach claude.ai connectors)."
-((${#offers[@]} == 0)) || text+=" Briefly offer once: $(printf '%s; ' "${offers[@]}")and only run that if the user agrees."
-jq -n --arg event "$event" --arg text "$text" \
+text="Obsidian journal, $when, without asking: tell the user in one line what you're doing, then $(printf '%s; ' "${tasks[@]}")"
+jq -n --arg event "$event" --arg text "${text%; }." \
   '{hookSpecificOutput: {hookEventName: $event, additionalContext: $text}}'
