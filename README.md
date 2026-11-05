@@ -173,7 +173,8 @@ whole session, and `~/Documents` holds both.
 
 After the first setup, changes are made by asking Claude Code, from any
 folder: "add jq", "update everything", "change the tmux status bar". A global
-instruction (`dot_config/claude/CLAUDE.md.tmpl`) sends it to this repo, and
+instruction (`dot_config/claude/CLAUDE.md.tmpl`) hands it to the
+`cradle-maintainer` agent (see Claude Code), which works in this repo, and
 [CLAUDE.md](CLAUDE.md) tells it how to work here: where each kind of change
 goes, the decisions already made, how to test without touching the machine,
 and the update routine.
@@ -346,7 +347,8 @@ it runs `claude`: in a shell, through its shims (the evening journal) or with
 |---|---|
 | Settings (theme, env, plugins, marketplaces, permissions, hooks) | Add keys to `.chezmoitemplates/claude-settings.json` (it already makes `chezmoi apply` and `update` always ask first). `modify_settings.json` merges them into the live file, so these values win, and anything Claude Code writes itself (`/model`, `/config`) is kept. Deleting a key here doesn't remove it from the live file; remove it there too. `false`, empty and `0` values can't override a live value either. |
 | Plugins | Add `"name@marketplace": true` under `enabledPlugins`. Claude Code installs them at the next session start. |
-| Global instructions, rules, agents, commands | Plain files under `dot_config/claude/`. `CLAUDE.md` there says this Mac is managed from this repo; add rules as `dot_config/claude/rules/*.md`. |
+| Global instructions, rules, agents, commands | Plain files under `dot_config/claude/`. `CLAUDE.md` there says this Mac is managed from this repo; add rules as `dot_config/claude/rules/*.md` and agents as `dot_config/claude/agents/<name>.md`. |
+| Agent: cradle-maintainer | `dot_config/claude/agents/cradle-maintainer.md`, the expert on this repo. Every session hands it setup changes and questions, from any folder. It reads this README and CLAUDE.md before each task rather than repeating them, so it can't drift from them. It edits, updates the docs and runs `scripts/check`, then stops and returns a summary of `chezmoi diff`; the session runs `chezmoi apply` (your OK) and messages it back to check the result, commit and push. Opus, with no Skylight tools. |
 | Skills from GitHub | Add an entry to `.chezmoiexternal.toml`, pinned to a commit, with a link to the skill's history so updates can be checked by hand. Your own skills go in `dot_config/claude/skills/<name>/SKILL.md`. |
 | MCP servers (user scope) | Claude Code stores these in its own state file, so they're registered by `run_onchange_after_45-claude-mcp.sh.tmpl`: add an `add <name> '<json>'` line there and the server's tool to mise. It replaces a server of the same name; removing a line doesn't unregister it (`claude mcp remove --scope user <name>`). |
 | MCP server: agentdb | [AgentDB](https://github.com/ruvnet/agentdb) (`npm:agentdb` in mise), vector memory with reflexion, skills and a causal graph as MCP tools. Work and personal memories are separate databases in `~/.local/share/agentdb/`: `~/.local/bin/agentdb-mcp` starts the server in the session's folder and uses `work.db` when `is-work` says it's work: git's identity there is the work one (the same remote rules as commits) or the folder is inside one of the work folders chezmoi asked for (in git or not), otherwise `personal.db`. Without a work identity everything is personal. To change the work folders, edit `workFolders` (full paths, `;` between them) in `~/.config/chezmoi/chezmoi.toml` and `chezmoi apply`. The global instructions tell Claude to search it before real tasks and store what it learned after (`reflexion_retrieve`, `reflexion_store`); nothing is stored automatically. A session keeps the database it started with, so start Claude in the repo, not in a parent folder of work and personal repos. `/mcp` in Claude Code shows whether it's connected. |

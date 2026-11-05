@@ -109,6 +109,8 @@ and every tag.
 | A file from someone else's repo | `.chezmoiexternal.toml`, pinned to a commit, with a link to its history above the entry |
 | A Neovim plugin | `dot_config/nvim/lua/plugins/`; then `chezmoi re-add ~/.config/nvim/lazy-lock.json` after it installs. Its language server goes in mise and `vim.lsp.enable` in `plugins/lsp.lua` |
 | Claude Code settings, plugins, MCP servers | see the Claude Code section of README.md |
+| A Claude Code agent | `dot_config/claude/agents/<name>.md`, only when it needs other tools, model or its own context; know-how alone is a skill. A row in README's Claude Code table |
+| How `cradle-maintainer` works | `dot_config/claude/agents/cradle-maintainer.md`. Rules and decisions stay in this file, which it reads each time; don't copy them into the agent |
 | Anything that only works through a claude.ai connector (Slack, Google, Atlassian...) | the feature where it belongs, plus a row in README's "claude.ai connectors" table: the connector, the access it needs, and what depends on it. Connectors aren't loaded in headless `claude -p` runs, so design for the next interactive session |
 | Obsidian settings or vault templates | `obsidian/`, applied to the work vault by `run_onchange_after_35-obsidian.sh.tmpl` (JSON settings are merged into the vault's `.obsidian/` files) |
 | A file in the repo that must not land in `~` | `.chezmoiignore` (names starting with `.` are skipped already) |
@@ -192,6 +194,11 @@ are listed so they aren't proposed again without a reason.
   so they'd run the `agentdb` CLI on the same database (reuse
   `agentdb-mcp`'s work/personal choice); first check the CLI covers recall
   and store.
+  `cradle-maintainer` (`dot_config/claude/agents/`) is the expert on this
+  repo: sessions elsewhere hand it every setup change and question. It
+  stops before `chezmoi apply`, so the user's OK stays with the main
+  session, which messages it back to commit and push. It reads this file
+  and README.md every time instead of repeating them.
   Skylight Calendar is the `skylight` MCP server (npm `skylight-mcp`), for
   personal sessions only (`is-work`; in work sessions it exits and shows as
   failed), its email and password read from the login keychain by
