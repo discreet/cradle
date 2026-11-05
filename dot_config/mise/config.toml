@@ -76,3 +76,4 @@ terraform = "latest"
 # AI
 claude-code = "latest"
 "npm:agentdb" = "latest" # vector memory, Claude Code's MCP server (run_onchange_after_45-claude-mcp)
+"npm:skylight-mcp" = "latest" # Skylight Calendar, Claude Code's MCP server (run_onchange_after_45-claude-mcp)

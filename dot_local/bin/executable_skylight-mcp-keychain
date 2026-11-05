@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Claude Code's Skylight MCP server (registered by run_onchange_after_45-claude-mcp).
+# Signs in with the Skylight email and password saved in the login keychain
+# under the service "skylight-mcp" (README: Claude Code), so neither is in a
+# file. Its OAuth tokens are cached in ~/.local/share/skylight-mcp.
+set -euo pipefail
+
+if ! item=$(security find-generic-password -s skylight-mcp 2>/dev/null); then
+  echo "skylight-mcp: no Skylight sign-in in the keychain (service skylight-mcp)" >&2
+  exit 1
+fi
+SKYLIGHT_EMAIL=$(sed -n 's/^ *"acct"<blob>="\(.*\)"$/\1/p' <<<"$item")
+SKYLIGHT_PASSWORD=$(security find-generic-password -s skylight-mcp -w)
+SKYLIGHT_TOKEN_FILE="$HOME/.local/share/skylight-mcp/tokens.json"
+export SKYLIGHT_EMAIL SKYLIGHT_PASSWORD SKYLIGHT_TOKEN_FILE
+exec skylight-mcp
