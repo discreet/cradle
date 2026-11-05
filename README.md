@@ -52,6 +52,8 @@ run, and a few steps only you can do afterwards.
   account, so this is done once, not per machine.
 - **Discord account in the Rex Beta Discord** (optional), for the
   `superlogical` MCP server.
+- **Skylight account email and password** (optional), for the `skylight`
+  MCP server.
 
 **Your answers to chezmoi's questions.** Bootstrap asks these once; the
 answers stay on the machine in `~/.config/chezmoi/chezmoi.toml`, never in
@@ -127,7 +129,11 @@ versions in `lazy-lock.json`. It ends by listing the steps below.
 6. **Sign in to the apps** that aren't Claude: Slack, Firefox.
 7. **Optional: Rex's community MCP server.** In Claude Code, `/mcp`, pick
    `superlogical` and sign in with Discord.
-8. **Check it all:** `chezmoi status` should print nothing, `mise ls` should
+8. **Optional: Skylight.** Save your Skylight sign-in in the keychain:
+   `security add-generic-password -s skylight-mcp -a <email> -w` (it asks
+   for the password). `/mcp` in Claude Code should then show `skylight`
+   connected.
+9. **Check it all:** `chezmoi status` should print nothing, `mise ls` should
    show every tool installed, and `scripts/check` in `~/Documents/cradle`
    should pass.
 
@@ -319,6 +325,7 @@ the `superlogical` MCP server.
 | `dot_config/ghostty/config` | Ghostty (Gruvbox dark). Its first window at launch runs `tmux-pick` |
 | `dot_local/bin/executable_vault-sync.tmpl`, `private_Library/LaunchAgents/local.vault-sync.plist.tmpl` | Backs up each Obsidian vault to its private git repo (see Obsidian); installed only when a vault repo is set. The LaunchAgent only without a work vault; with one, the journal's evening run starts the backup |
 | `dot_local/bin/executable_agentdb-mcp`, `dot_local/bin/executable_is-work.tmpl` | `~/.local/bin/agentdb-mcp`: starts agentdb's MCP server on the work or personal database (see Claude Code). `~/.local/bin/is-work [folder]`: exits 0 when a folder is work (git's identity there, or inside a work folder); agentdb, the journal and Claude's choice of vault all use it |
+| `dot_local/bin/executable_skylight-mcp-keychain` | `~/.local/bin/skylight-mcp-keychain`: starts the Skylight MCP server with the sign-in saved in the keychain (see Claude Code) |
 | `dot_local/bin/executable_tmux-pick` | `~/.local/bin/tmux-pick`: lists tmux sessions, most recent first, to attach to or start a new one; starts one straight away if there are none. Esc or leaving tmux drops to a plain shell |
 | `dot_config/claude/`, `.chezmoitemplates/claude-settings.json` | Claude Code (see below) |
 | `dot_config/claude/skills/jira-ticket/` | The `jira-ticket` skill and `standards.md`, the standards every Story, Epic and Spike follows (see Jira tickets) |
@@ -344,6 +351,7 @@ it runs `claude`: in a shell, through its shims (the evening journal) or with
 | MCP servers (user scope) | Claude Code stores these in its own state file, so they're registered by `run_onchange_after_45-claude-mcp.sh.tmpl`: add an `add <name> '<json>'` line there and the server's tool to mise. It replaces a server of the same name; removing a line doesn't unregister it (`claude mcp remove --scope user <name>`). |
 | MCP server: agentdb | [AgentDB](https://github.com/ruvnet/agentdb) (`npm:agentdb` in mise), vector memory with reflexion, skills and a causal graph as MCP tools. Work and personal memories are separate databases in `~/.local/share/agentdb/`: `~/.local/bin/agentdb-mcp` starts the server in the session's folder and uses `work.db` when `is-work` says it's work: git's identity there is the work one (the same remote rules as commits) or the folder is inside one of the work folders chezmoi asked for (in git or not), otherwise `personal.db`. Without a work identity everything is personal. To change the work folders, edit `workFolders` (full paths, `;` between them) in `~/.config/chezmoi/chezmoi.toml` and `chezmoi apply`. The global instructions tell Claude to search it before real tasks and store what it learned after (`reflexion_retrieve`, `reflexion_store`); nothing is stored automatically. A session keeps the database it started with, so start Claude in the repo, not in a parent folder of work and personal repos. `/mcp` in Claude Code shows whether it's connected. |
 | MCP server: superlogical | [Superlogical's Rex community server](https://www.superlogical.com/rex/docs/beta/community-mcp), hosted over HTTP, so nothing is installed: Rex's docs, every release's changelog, and past and current Rex Beta Discord threads, for reading up on Rex (see Terminal). It signs in with Discord OAuth and needs membership of the Rex Beta Discord: run `/mcp` in Claude Code, pick `superlogical` and sign in, once per machine. Named `superlogical`, not `rex`, as Superlogical recommends, so it doesn't clash with Rex's CLI and skills. |
+| MCP server: skylight | [skylight-mcp](https://github.com/chrischall/skylight-mcp) (`npm:skylight-mcp` in mise), the family's Skylight Calendar frame: events, lists, chores, meals, messages, photos and frame settings, read and write. It uses Skylight's app API, which isn't a public one, so a Skylight change can break it. `~/.local/bin/skylight-mcp-keychain` starts it with the email (account) and password (`-w`) of the login keychain item `skylight-mcp`, added once per machine (Getting started); to change them, run the same `security add-generic-password` with `-U`. Its OAuth tokens are cached in `~/.local/share/skylight-mcp/tokens.json`. With more than one frame on the account, it also needs `SKYLIGHT_FRAME_ID`. |
 | Not managed | `.claude.json` (sign-in, per-project state), history, sessions, the plugin cache, and anything synced from your claude.ai account (connectors, synced skills; see [claude.ai connectors](#claudeai-connectors)). |
 
 ## claude.ai connectors

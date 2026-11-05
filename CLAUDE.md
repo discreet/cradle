@@ -192,6 +192,10 @@ are listed so they aren't proposed again without a reason.
   so they'd run the `agentdb` CLI on the same database (reuse
   `agentdb-mcp`'s work/personal choice); first check the CLI covers recall
   and store.
+  Skylight Calendar is the `skylight` MCP server (npm `skylight-mcp`), its
+  email and password read from the login keychain by
+  `~/.local/bin/skylight-mcp-keychain`, never from a file or a chezmoi
+  question.
 - **Folders:** `~/Documents/work/` and `~/Documents/personal/`, each with
   `code/<org>/<repo>`, its `Obsidian/` vault and other files in topic
   folders next to `code/` (not as vault attachments); `cradle` stays at
