@@ -5,7 +5,12 @@ Claude Code's own settings) is managed by chezmoi from the cradle repo, at
 `chezmoi source-path` (normally `~/Documents/cradle`).
 
 When asked to install, update, change or remove anything about this machine's
-setup, from any folder, read that repo's CLAUDE.md and make the change there.
+setup, or a question about it, from any folder, delegate it to the
+`cradle-maintainer` agent, which makes the change in that repo. It stops
+before `chezmoi apply` and returns a summary: show it to the user, run
+`chezmoi apply` (the user's OK), then message the agent back to confirm,
+commit and push. Inside the repo you may also work directly, following its
+CLAUDE.md.
 Don't edit the managed files in `~` directly, and don't install tools
 globally with `brew install`, `npm install -g`, `pip install`, `uv tool
 install` or `go install`; they belong in the repo's mise config or Brewfile.
