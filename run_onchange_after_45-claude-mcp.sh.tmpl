@@ -23,6 +23,7 @@ add agentdb '{"type": "stdio", "command": {{ joinPath .chezmoi.homeDir ".local/b
 add superlogical '{"type": "http", "url": "https://www.superlogical.com/rex/community-mcp"}'
 
 # skylight (npm:skylight-mcp in mise): the family's Skylight Calendar frame.
-# ~/.local/bin/skylight-mcp-keychain signs in with the email and password
-# saved in the login keychain; without them the server just fails to start.
+# ~/.local/bin/skylight-mcp-keychain starts it in personal sessions only and
+# signs in with the email and password saved in the login keychain; in work
+# sessions, or without them, the server just fails to start.
 add skylight '{"type": "stdio", "command": {{ joinPath .chezmoi.homeDir ".local/bin/skylight-mcp-keychain" | toJson }}}'
