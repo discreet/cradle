@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
-# Claude Code's Skylight MCP server (registered by run_onchange_after_45-claude-mcp).
+# Claude Code's Skylight MCP server (registered by run_onchange_after_45-claude-mcp),
+# for personal sessions only: Claude Code starts this in the session's
+# folder, and when is-work says that's work it exits, so the server shows as
+# failed there and none of its tools load.
 # Signs in with the Skylight email and password saved in the login keychain
 # under the service "skylight-mcp" (README: Claude Code), so neither is in a
 # file. Its OAuth tokens are cached in ~/.local/share/skylight-mcp.
 set -euo pipefail
+
+if "$(dirname "$0")/is-work"; then
+  echo "skylight-mcp: personal sessions only; this folder is work" >&2
+  exit 1
+fi
 
 if ! item=$(security find-generic-password -s skylight-mcp 2>/dev/null); then
   echo "skylight-mcp: no Skylight sign-in in the keychain (service skylight-mcp)" >&2
