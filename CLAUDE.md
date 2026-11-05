@@ -175,35 +175,6 @@ are listed so they aren't proposed again without a reason.
   `StrictHostKeyChecking accept-new`, keepalives and `ControlMaster` were
   declined.
 - **Docker:** Colima from mise, started by a LaunchAgent, default VM size.
-- **Claude Code:** from mise with its auto-updater off; config in
-  `~/.config/claude` via `CLAUDE_CONFIG_DIR` (set in mise's `[env]`, so it
-  reaches claude from shells, shims and launchd alike); terminal only, no desktop app or
-  IDE extension. MCP servers are registered by
-  `run_onchange_after_45-claude-mcp.sh.tmpl`. agentdb (npm, ruvnet) is the
-  memory MCP server, with separate work and personal databases
-  (`~/.local/bin/agentdb-mcp`). A session is work when git's identity in its
-  folder is work or the folder is under a work folder (`workFolders`, asked
-  per machine with a work identity); anything else is personal. One shared
-  database, one per project and marker files were rejected. Claude uses it
-  because the global instructions (`dot_config/claude/CLAUDE.md.tmpl`) say
-  to: `reflexion_retrieve` before real tasks, `reflexion_store` after.
-  Possible later step, if Claude skips that too often: Claude Code hooks that
-  recall at `SessionStart` and store at `Stop`. Hooks can't call MCP tools,
-  so they'd run the `agentdb` CLI on the same database (reuse
-  `agentdb-mcp`'s work/personal choice); first check the CLI covers recall
-  and store.
-  `cradle-maintainer` (`dot_config/claude/agents/`) is the expert on this
-  repo: sessions elsewhere hand it every setup change and question. It
-  stops before `chezmoi apply`, so the user's OK stays with the main
-  session, which messages it back to commit and push. It reads this file
-  and README.md every time instead of repeating them.
-  Skylight Calendar is the `skylight` MCP server (npm `skylight-mcp`), for
-  personal sessions only (`is-work`; in work sessions it exits and shows as
-  failed), its email and password read from the login keychain by
-  `~/.local/bin/skylight-mcp-keychain`, never from a file or a chezmoi
-  question. Every Skylight delete asks first, through Claude Code `ask`
-  rules (`skylight_delete_*`, `_remove_*`, `_clear_*`), not the server's own
-  confirmations, which only some tools have.
 - **Folders:** `~/Documents/work/` and `~/Documents/personal/`, each with
   `code/<org>/<repo>`, its `Obsidian/` vault and other files in topic
   folders next to `code/` (not as vault attachments); `cradle` stays at
