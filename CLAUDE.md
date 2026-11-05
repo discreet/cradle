@@ -196,7 +196,9 @@ are listed so they aren't proposed again without a reason.
   personal sessions only (`is-work`; in work sessions it exits and shows as
   failed), its email and password read from the login keychain by
   `~/.local/bin/skylight-mcp-keychain`, never from a file or a chezmoi
-  question.
+  question. Every Skylight delete asks first, through Claude Code `ask`
+  rules (`skylight_delete_*`, `_remove_*`, `_clear_*`), not the server's own
+  confirmations, which only some tools have.
 - **Folders:** `~/Documents/work/` and `~/Documents/personal/`, each with
   `code/<org>/<repo>`, its `Obsidian/` vault and other files in topic
   folders next to `code/` (not as vault attachments); `cradle` stays at
