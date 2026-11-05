@@ -198,7 +198,12 @@ are listed so they aren't proposed again without a reason.
   repo: sessions elsewhere hand it every setup change and question. It
   stops before `chezmoi apply`, so the user's OK stays with the main
   session, which messages it back to commit and push. It reads this file
-  and README.md every time instead of repeating them.
+  and README.md every time instead of repeating them. It is the only custom
+  agent for now (2026-11-05). Tabled, not rejected: a `work-lead`/
+  `personal-lead` orchestrator run as the main session (`claude --agent`),
+  a read-only `pm` agent over Slack, Jira and Google, and a generic
+  `repo-worker`, with repo knowledge kept in each repo's own CLAUDE.md
+  rather than per-repo agents here. Don't propose them again unless asked.
   Skylight Calendar is the `skylight` MCP server (npm `skylight-mcp`), for
   personal sessions only (`is-work`; in work sessions it exits and shows as
   failed), its email and password read from the login keychain by
