@@ -12,6 +12,9 @@ set -euo pipefail
 d=com.superlogical.rex
 defaults write $d Workspace.appearance -string dark
 defaults write $d Workspace.terminalPaddingY -float 10
+# Tabs along the bottom, where tmux's status bar was (Toolbar layout: Below).
+defaults write $d Workspace.tabStyle -string horizontal
+defaults write $d Workspace.tabBarEdge -string bottom
 # The shell can't change the cursor (Ghostty: shell-integration no-cursor).
 defaults write $d Workspace.terminalCursorStyleForced -bool true
 # Updates only when asked: notify, never download or install on its own.

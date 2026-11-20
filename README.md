@@ -278,7 +278,8 @@ only that one's files:
     at `~/Library/Application Support/com.superlogical.rex/RexServer/Versions/Current/Rex Server.app/Contents/MacOS/rex`.
   - **Settings:** Rex keeps them in macOS defaults (`com.superlogical.rex`).
     `run_onchange_after_41-rex-settings.sh.tmpl` writes the ones that differ
-    from Rex's defaults: dark appearance, padding Y 10, cursor style forced,
+    from Rex's defaults: dark appearance, padding Y 10, tabs along the bottom
+    (where tmux's status bar was; Rex has no custom status line), cursor style forced,
     Developer Mode on and updates that only notify. Rex's defaults already
     match the rest of Ghostty's config (font size 12, padding X 10, block
     cursor without blinking, Option as Alt). Ghostty's 150×50 window size
