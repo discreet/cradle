@@ -29,6 +29,12 @@ check() { # check <description> <command...>
 }
 skip() { echo "skip  $1"; }
 have() { command -v "$1" >/dev/null; }
+# mise's tools are shims; run with HOME or XDG_CONFIG_HOME pointed at a
+# throwaway folder, they no longer see the real global config as trusted and
+# refuse it. Call the binaries themselves.
+chezmoi_bin=$(mise which chezmoi 2>/dev/null || command -v chezmoi)
+chezmoi() { "$chezmoi_bin" "$@"; }
+nvim_bin=$(mise which nvim 2>/dev/null || command -v nvim)
 
 # Rendered three times: work on github.com beside personal, under two orgs,
 # with both Obsidian vaults (most checks use this one); work on its own host,
@@ -414,7 +420,7 @@ release_tags() { # every tag is an annotated, signed vMAJOR.MINOR.PATCH
 nvim_start() {
   local out
   out=$(XDG_CONFIG_HOME=$home/.config XDG_DATA_HOME=$HOME/.local/share \
-    XDG_STATE_HOME=$tmp/state XDG_CACHE_HOME=$tmp/cache nvim --headless +qall 2>&1)
+    XDG_STATE_HOME=$tmp/state XDG_CACHE_HOME=$tmp/cache "$nvim_bin" --headless +qall 2>&1)
   [[ -z $out ]] || { echo "$out"; return 1; }
 }
 
