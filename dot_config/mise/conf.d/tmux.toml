@@ -1,0 +1,4 @@
+# tmux, for Ghostty + tmux machines only (the chezmoi question "terminal");
+# Rex machines don't get this file. mise reads conf.d/*.toml after config.toml.
+[tools]
+tmux = "latest"

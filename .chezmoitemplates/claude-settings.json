@@ -19,10 +19,7 @@
       "Bash(chezmoi update *)",
       "Bash(chezmoi init *)",
       "Bash(chezmoi destroy *)",
-      "Bash(chezmoi purge *)",
-      "mcp__skylight__skylight_delete_*",
-      "mcp__skylight__skylight_remove_*",
-      "mcp__skylight__skylight_clear_*"
+      "Bash(chezmoi purge *)"
     ]
   }
 }

@@ -8,9 +8,12 @@ Configuration for an Apple Silicon Mac, built on three tools:
   Neovim, tmux, kubectl, Claude Code and the rest
   ([config](dot_config/mise/config.toml)). New releases wait a week before
   mise installs them, so a bad release is usually pulled first.
-- A [Brewfile](Brewfile) covers only what mise can't: bash (the login shell),
-  bash-completion, mise itself, and GUI apps. git is Apple's, from the Command
-  Line Tools.
+- A [Brewfile](Brewfile.tmpl) covers only what mise can't: bash (the login
+  shell), bash-completion, mise itself, and GUI apps (Obsidian, and Ghostty
+  unless the machine uses Rex). git is Apple's, from the Command Line Tools.
+
+Each machine picks its terminal when it's set up: Ghostty with tmux (the
+default), or Rex (see [Terminal](#terminal-ghostty--tmux-or-rex)).
 
 ## Getting started
 
@@ -45,9 +48,8 @@ run, and a few steps only you can do afterwards.
   goes on your GitHub account. The work one goes on the work host, inside a
   work org, so it's committed and pushed as work. Skip a repo to leave that
   vault without a backup.
-- **Discord account in the Rex Beta Discord** (optional), for the
-  `superlogical` MCP server.
-- **Skylight account email and password** (optional), for the `skylight`
+- **Discord account in the Rex Beta Discord**: needed to download Rex if
+  this machine will use it, and optional otherwise, for the `superlogical`
   MCP server.
 
 **Your answers to chezmoi's questions.** Bootstrap asks these once; the
@@ -69,6 +71,7 @@ other questions only when you give the vault.
 | Personal Obsidian vault folder | `~/Documents/personal/Obsidian` |
 | Personal vault folders Claude must not read | As above |
 | Private git repo for the personal vault | Its SSH URL |
+| Terminal | `ghostty` (Ghostty with tmux) or `rex` (Rex, installed by hand) |
 
 ### Run bootstrap
 
@@ -109,8 +112,11 @@ versions in `lazy-lock.json`. It ends by listing the steps below.
    account on the work host the same way (as a Signing key too, if the host
    supports SSH signatures). Commits show as Verified only when each email you
    gave chezmoi is verified (or is the noreply address) on its account.
-2. **Open Ghostty.** Its first window starts tmux (`tmux-pick`). New terminals
-   use Homebrew's bash; Caps Lock is already Control.
+2. **Open the terminal.** Ghostty: its first window starts tmux
+   (`tmux-pick`). Rex: install it from the tester `.dmg` (Rex Beta Discord),
+   then set the Settings that can't live in a file (see
+   [Terminal](#terminal-ghostty--tmux-or-rex)). New terminals use Homebrew's
+   bash; Caps Lock is already Control.
 3. **Sign in to Claude Code:** `claude auth login`, with the claude.ai account
    that has the connectors. The first time you start `claude` in a folder,
    trust it when asked; Claude Code runs no hooks (the journal's) until you do.
@@ -121,14 +127,9 @@ versions in `lazy-lock.json`. It ends by listing the steps below.
    folder. Then run `chezmoi apply` once, so the work vault gets its Daily
    notes settings and templates. Optionally, give "Templates: Insert
    template" a hotkey (Settings → Hotkeys) to start meeting notes quickly.
-6. **Sign in to the apps** that aren't Claude: Slack, Firefox.
-7. **Optional: Rex's community MCP server.** In Claude Code, `/mcp`, pick
+6. **Optional: Rex's community MCP server.** In Claude Code, `/mcp`, pick
    `superlogical` and sign in with Discord.
-8. **Optional: Skylight.** Save your Skylight sign-in in the keychain:
-   `security add-generic-password -s skylight-mcp -a <email> -w` (it asks
-   for the password). `/mcp` in Claude Code should then show `skylight`
-   connected.
-9. **Check it all:** `chezmoi status` should print nothing, `mise ls` should
+7. **Check it all:** `chezmoi status` should print nothing, `mise ls` should
    show every tool installed, and `scripts/check` in `~/Documents/cradle`
    should pass.
 
@@ -194,7 +195,8 @@ The commands behind what Claude does, for reference:
 | Preview changes | `chezmoi diff` |
 | Pull and apply updates | `chezmoi update` |
 | Add a CLI tool | add it to `dot_config/mise/config.toml` (`mise registry <name>` to check it's there), then `chezmoi apply` |
-| Add an app | add a `cask` to `Brewfile`, then `chezmoi apply` |
+| Add an app | add a `cask` to `Brewfile.tmpl`, then `chezmoi apply` |
+| Remove a tool or app | delete its line, `chezmoi apply`, then uninstall it by hand (`mise uninstall <tool>`, `brew uninstall --cask <app>`): cradle doesn't uninstall anything yet |
 | Update tools | `mise upgrade` (tools set to `latest`; releases under a week old are skipped, `MISE_MINIMUM_RELEASE_AGE=0 mise upgrade <tool>` takes one anyway), then regenerate completions: `chezmoi execute-template <"$(chezmoi source-path)/run_onchange_after_25-completions.sh.tmpl" \| bash`; `brew upgrade` for apps |
 | Change a tool version | edit `dot_config/mise/config.toml`, then `chezmoi apply` |
 | Pin a version for a project | `mise use kubectl@1.34` inside the project |
@@ -218,8 +220,9 @@ bottom-left corner:
 - Caps Lock is Control, on every keyboard, through a LaunchAgent that runs
   `hidutil` at login. tmux's prefix (`C-Space`), Neovim's split movement and
   completion, fzf and readline all use Control.
-- macOS's own `⌃Space` shortcut (select the previous input source) is turned
-  off so it can't take tmux's prefix (`run_onchange_after_40-macos-shortcuts.sh`).
+- On Ghostty + tmux machines, macOS's own `⌃Space` shortcut (select the
+  previous input source) is turned off so it can't take tmux's prefix
+  (`run_onchange_after_40-macos-shortcuts.sh.tmpl`).
 - Bash history prefix search is on `C-p`/`C-n` as well as Up/Down.
 - tmux splits side by side with `\` instead of `|`, which needs Shift.
 
@@ -245,12 +248,35 @@ Alternatives considered and not set up, in case they're wanted later:
   window 1, or `cmd+t=text:\x00c` for a new window. These replace Ghostty's own
   tab shortcuts.
 
-## Terminal: Ghostty + tmux, Rex considered
+## Terminal: Ghostty + tmux, or Rex
 
-Ghostty draws the terminal and tmux keeps sessions alive. Ghostty's first
-window runs `tmux-pick`, which attaches to a session.
-[Rex](https://superlogical.com), from Ghostty's author, does both jobs in one
-app. It's a possible later change, not set up. Checked 2026-11-03 against its
+chezmoi asks each machine which terminal it uses (`terminal`), and installs
+only that one's files:
+
+- **`ghostty`** (the default): Ghostty draws the terminal and tmux keeps
+  sessions alive. Ghostty's first window runs `tmux-pick`, which attaches to
+  a session. Installs the Ghostty cask, tmux (`dot_config/mise/conf.d/tmux.toml`),
+  `tmux.conf`, Ghostty's config, `tmux-pick`, and turns off macOS's `⌃Space`.
+- **`rex`**: [Rex](https://superlogical.com), from Ghostty's author, does
+  both jobs in one app. None of the above is installed. Rex itself isn't
+  either: there's no cask yet, so download the tester `.dmg` from the Rex
+  Beta Discord. cradle manages `~/.config/rex/init.lua`, which holds keys,
+  actions and hosts (none set yet: Rex's own keys get learned as they come).
+  Private Rex servers (`rex.host{...}`) go in `~/.config/rex/local.lua`,
+  which `init.lua` loads if it's there and cradle doesn't manage. After
+  editing either: `rex config check`, then `rex config reload` (Rex doesn't
+  watch the file). The rest is only in Rex's Settings, so set it by hand on
+  each Rex machine: Themes → Import Theme (Gruvbox Dark, from Ghostty's
+  palette), Terminal → Cursor style (block, no blink), Keyboard → Option key
+  as Alt, and under Developer (turn on Developer Mode) both automatic-update
+  switches off.
+
+To switch a machine, run `chezmoi init` and give the other answer (or edit
+`terminal` in `~/.config/chezmoi/chezmoi.toml`), then `chezmoi apply`. The
+old terminal's apps and tools stay installed until you remove them.
+
+Rex is still a beta; the rest of this section is why Ghostty + tmux is the
+default, and when Rex can take over. Checked 2026-11-03 against its
 [docs](https://www.superlogical.com/rex/docs), changelog and beta feedback
 (through the `superlogical` MCP server): still a beta for invited testers,
 with new builds almost daily (Mac `0.1.0-preview.25`, Linux server
@@ -269,12 +295,12 @@ with new builds almost daily (Mac `0.1.0-preview.25`, Linux server
 | License | Both open source | Closed source and unfree; free to use, with no telemetry, account or license checks |
 | Install | Brewfile cask, mise | Testers only: a Mac `.dmg`, iOS through TestFlight, Linux packages behind a Discord sign-in. More install options promised for the public release |
 
-Switching would replace tmux as well as Ghostty: `tmux-pick`, `tmux.conf` and
-the `C-Space` prefix would go. It would be a breaking change.
+A Rex machine has no tmux: `tmux-pick`, `tmux.conf` and the `C-Space`
+prefix go with it.
 
-### What Rex needs before switching
+### What Rex needs before it's the default
 
-Switch when every row is met. The list covers what this setup and the way
+Make `rex` the default answer when every row is met. The list covers what this setup and the way
 it's run need, not tmux or Ghostty habits: with Rex, its own keys and ways of
 working get learned from scratch. ✅ met, ◐ partly or unconfirmed, ❌ not
 yet. Status as of 2026-11-03.
@@ -302,6 +328,7 @@ the `superlogical` MCP server.
 
 | Path | What it configures |
 |---|---|
+| `Brewfile.tmpl` | Homebrew formulae and apps; a template, so Ghostty is left out on Rex machines |
 | `CLAUDE.md`, `.claude/settings.json` | How Claude Code maintains this repo, and which commands it may run here without asking. Not copied to `~` |
 | `obsidian/` | Obsidian's Daily notes and Templates settings and the daily note template, applied to the work vault by `run_onchange_after_35-obsidian.sh.tmpl`. Not copied to `~` |
 | `dot_config/claude/skills/journal/`, `dot_local/bin/executable_journal-data`, `dot_local/bin/executable_obsidian-journal`, `dot_local/bin/executable_journal-check.tmpl`, `private_Library/LaunchAgents/local.obsidian-journal.plist.tmpl` | The work vault's journal (see Obsidian); installed only when a work vault is set |
@@ -316,16 +343,16 @@ the `superlogical` MCP server.
 | `private_dot_ssh/` | SSH config (keys unlocked through the macOS keychain; a `git-work` host that points at the work git host and offers only the work key, so the host sees the work account) and GitHub's published host keys, so the first connection to GitHub is checked instead of trusted |
 | `private_dot_docker/`, `.chezmoitemplates/docker-config.json` | Docker CLI: compose and buildx plugins from mise, logins in the macOS keychain. Merged into the live file like Claude Code's settings |
 | `dot_config/nvim/` | Neovim: lazy.nvim, built-in LSP and completion (servers installed by mise), conform for formatting |
-| `dot_config/tmux/tmux.conf` | tmux (prefix `C-Space`; the built-in keys it relies on are listed at the top) |
-| `dot_config/ghostty/config` | Ghostty (Gruvbox dark). Its first window at launch runs `tmux-pick` |
+| `dot_config/tmux/tmux.conf`, `dot_config/mise/conf.d/tmux.toml` | tmux (prefix `C-Space`; the built-in keys it relies on are listed at the top) and its install. Ghostty + tmux machines only |
+| `dot_config/ghostty/config` | Ghostty (Gruvbox dark). Its first window at launch runs `tmux-pick`. Ghostty + tmux machines only |
+| `dot_config/rex/init.lua` | Rex's keys, actions and hosts; loads the unmanaged `local.lua` beside it. Rex machines only |
 | `dot_local/bin/executable_vault-sync.tmpl`, `private_Library/LaunchAgents/local.vault-sync.plist.tmpl` | Backs up each Obsidian vault to its private git repo (see Obsidian); installed only when a vault repo is set. The LaunchAgent only without a work vault; with one, the journal's evening run starts the backup |
 | `dot_local/bin/executable_agentdb-mcp`, `dot_local/bin/executable_is-work.tmpl` | `~/.local/bin/agentdb-mcp`: starts agentdb's MCP server on the work or personal database (see Claude Code). `~/.local/bin/is-work [folder]`: exits 0 when a folder is work (git's identity there, or inside a work folder); agentdb, the journal and Claude's choice of vault all use it |
-| `dot_local/bin/executable_skylight-mcp-keychain` | `~/.local/bin/skylight-mcp-keychain`: starts the Skylight MCP server in personal sessions, with the sign-in saved in the keychain (see Claude Code) |
-| `dot_local/bin/executable_tmux-pick` | `~/.local/bin/tmux-pick`: lists tmux sessions, most recent first, to attach to or start a new one; starts one straight away if there are none. Esc or leaving tmux drops to a plain shell |
+| `dot_local/bin/executable_tmux-pick` | Ghostty + tmux machines only. `~/.local/bin/tmux-pick`: lists tmux sessions, most recent first, to attach to or start a new one; starts one straight away if there are none. Esc or leaving tmux drops to a plain shell |
 | `dot_config/claude/`, `.chezmoitemplates/claude-settings.json` | Claude Code (see below) |
 | `.chezmoiexternal.toml` | Files downloaded from other repos, pinned to a commit (Claude Code skills) |
 | `private_Library/LaunchAgents/` | At login: starts Colima (Docker), loads SSH keys from the keychain into ssh-agent (git signs commits through it) and makes Caps Lock a Control key. Every evening at 18:00: the Obsidian journal, then the vault backups |
-| `run_onchange_*` | Re-run `brew bundle`, `mise install` and completion generation when their inputs change, reload the LaunchAgents, register Claude Code's MCP servers, and turn off macOS's `⌃Space` shortcut |
+| `run_onchange_*` | Re-run `brew bundle`, `mise install` and completion generation when their inputs change, reload the LaunchAgents, register Claude Code's MCP servers, and turn off macOS's `⌃Space` shortcut (Ghostty + tmux machines) |
 
 ## Claude Code
 
@@ -341,12 +368,11 @@ it runs `claude`: in a shell, through its shims (the evening journal) or with
 | Settings (theme, env, plugins, marketplaces, permissions, hooks) | Add keys to `.chezmoitemplates/claude-settings.json` (it already makes `chezmoi apply` and `update` always ask first). `modify_settings.json` merges them into the live file, so these values win, and anything Claude Code writes itself (`/model`, `/config`) is kept. Deleting a key here doesn't remove it from the live file; remove it there too. `false`, empty and `0` values can't override a live value either. |
 | Plugins | Add `"name@marketplace": true` under `enabledPlugins`. Claude Code installs them at the next session start. |
 | Global instructions, rules, agents, commands | Plain files under `dot_config/claude/`. `CLAUDE.md` there says this Mac is managed from this repo; add rules as `dot_config/claude/rules/*.md` and agents as `dot_config/claude/agents/<name>.md`. |
-| Agent: cradle-maintainer | `dot_config/claude/agents/cradle-maintainer.md`, the expert on this repo. Every session hands it setup changes and questions, from any folder. It reads this README and CLAUDE.md before each task rather than repeating them, so it can't drift from them. It edits, updates the docs and runs `scripts/check`, then stops and returns a summary of `chezmoi diff`; the session runs `chezmoi apply` (your OK) and messages it back to check the result, commit and push. Opus, with no Skylight tools. |
+| Agent: cradle-maintainer | `dot_config/claude/agents/cradle-maintainer.md`, the expert on this repo. Every session hands it setup changes and questions, from any folder. It reads this README and CLAUDE.md before each task rather than repeating them, so it can't drift from them. It edits, updates the docs and runs `scripts/check`, then stops and returns a summary of `chezmoi diff`; the session runs `chezmoi apply` (your OK) and messages it back to check the result, commit and push. Opus. |
 | Skills from GitHub | Add an entry to `.chezmoiexternal.toml`, pinned to a commit, with a link to the skill's history so updates can be checked by hand. Your own skills go in `dot_config/claude/skills/<name>/SKILL.md`. |
 | MCP servers (user scope) | Claude Code stores these in its own state file, so they're registered by `run_onchange_after_45-claude-mcp.sh.tmpl`: add an `add <name> '<json>'` line there and the server's tool to mise. It replaces a server of the same name; removing a line doesn't unregister it (`claude mcp remove --scope user <name>`). |
 | MCP server: agentdb | [AgentDB](https://github.com/ruvnet/agentdb) (`npm:agentdb` in mise), vector memory with reflexion, skills and a causal graph as MCP tools. Work and personal memories are separate databases in `~/.local/share/agentdb/`: `~/.local/bin/agentdb-mcp` starts the server in the session's folder and uses `work.db` when `is-work` says it's work: git's identity there is the work one (the same remote rules as commits) or the folder is inside one of the work folders chezmoi asked for (in git or not), otherwise `personal.db`. Without a work identity everything is personal. To change the work folders, edit `workFolders` (full paths, `;` between them) in `~/.config/chezmoi/chezmoi.toml` and `chezmoi apply`. The global instructions tell Claude to search it before real tasks and store what it learned after (`reflexion_retrieve`, `reflexion_store`); nothing is stored automatically. A session keeps the database it started with, so start Claude in the repo, not in a parent folder of work and personal repos. `/mcp` in Claude Code shows whether it's connected. |
 | MCP server: superlogical | [Superlogical's Rex community server](https://www.superlogical.com/rex/docs/beta/community-mcp), hosted over HTTP, so nothing is installed: Rex's docs, every release's changelog, and past and current Rex Beta Discord threads, for reading up on Rex (see Terminal). It signs in with Discord OAuth and needs membership of the Rex Beta Discord: run `/mcp` in Claude Code, pick `superlogical` and sign in, once per machine. Named `superlogical`, not `rex`, as Superlogical recommends, so it doesn't clash with Rex's CLI and skills. |
-| MCP server: skylight | [skylight-mcp](https://github.com/chrischall/skylight-mcp) (`npm:skylight-mcp` in mise), the family's Skylight Calendar frame: events, lists, chores, meals, messages, photos and frame settings, read and write. It uses Skylight's app API, which isn't a public one, so a Skylight change can break it. Personal sessions only: in a work session (`is-work`, the same rule as agentdb) it doesn't start, so `/mcp` lists `skylight` as failed there; that's expected. `~/.local/bin/skylight-mcp-keychain` starts it with the email (account) and password (`-w`) of the login keychain item `skylight-mcp`, added once per machine (Getting started); to change them, run the same `security add-generic-password` with `-U`. Its OAuth tokens are cached in `~/.local/share/skylight-mcp/tokens.json`. With more than one frame on the account, it also needs `SKYLIGHT_FRAME_ID`. Every Skylight tool that deletes (`skylight_delete_*`, `skylight_remove_*`, `skylight_clear_*`) asks you first, through `ask` rules in Claude Code's settings, in every permission mode (only some of them have a confirmation of their own). A new kind of delete tool with another name needs its own rule. |
 | Not managed | `.claude.json` (sign-in, per-project state), history, sessions, the plugin cache, and anything synced from your claude.ai account (connectors, synced skills; see [claude.ai connectors](#claudeai-connectors)). |
 
 ## claude.ai connectors

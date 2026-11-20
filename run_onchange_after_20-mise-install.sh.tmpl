@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-# Re-runs whenever the global mise config changes.
+# Re-runs whenever the global mise config changes, conf.d's tmux.toml
+# included on Ghostty + tmux machines.
 # mise config hash: {{ include "dot_config/mise/config.toml" | sha256sum }}
+{{- if eq .terminal "ghostty" }}
+# tmux.toml hash: {{ include "dot_config/mise/conf.d/tmux.toml" | sha256sum }}
+{{- end }}
 set -euo pipefail
 
 eval "$(/opt/homebrew/bin/brew shellenv)"

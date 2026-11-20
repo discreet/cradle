@@ -4,6 +4,14 @@ bootstrap.sh
 CLAUDE.md
 obsidian
 scripts
+{{- if eq .terminal "rex" }}
+.config/ghostty
+.config/tmux
+.config/mise/conf.d/tmux.toml
+.local/bin/tmux-pick
+{{- else }}
+.config/rex
+{{- end }}
 {{- if not .workEmail }}
 .config/git/work
 {{- end }}

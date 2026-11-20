@@ -44,6 +44,9 @@
 {{-   $personalVaultPrivate = promptStringOnce . "personalVaultPrivate" "Personal vault folders Claude must not read (separated by semicolons; blank for none)" -}}
 {{-   $personalVaultRepo = promptStringOnce . "personalVaultRepo" "Private git repo to back up the personal vault to (SSH URL; blank for none)" -}}
 {{- end -}}
+{{- /* Terminal: Ghostty with tmux, or Rex (installed by hand from its tester
+       .dmg; see README's Terminal section). */ -}}
+{{- $terminal := promptChoiceOnce . "terminal" "Terminal: ghostty (Ghostty with tmux) or rex (Rex, installed by hand)" (list "ghostty" "rex") "ghostty" -}}
 
 # Remembers where the repo was cloned, so later commands find it from anywhere.
 sourceDir = {{ .chezmoi.sourceDir | quote }}
@@ -61,6 +64,7 @@ sourceDir = {{ .chezmoi.sourceDir | quote }}
   personalVaultPrivate = {{ $personalVaultPrivate | quote }}
   workVaultRepo = {{ $workVaultRepo | quote }}
   personalVaultRepo = {{ $personalVaultRepo | quote }}
+  terminal = {{ $terminal | quote }}
 
 [edit]
   command = "nvim"

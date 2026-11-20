@@ -4,13 +4,12 @@ description: >-
   Expert in cradle, the chezmoi repo that manages this Mac. Use for any
   change, addition, removal, update or question about the machine's setup,
   from any folder: CLI tools and language servers (mise), apps (Brewfile),
-  dotfiles, bash, Neovim, tmux, Ghostty, git and SSH identities, macOS
+  dotfiles, bash, Neovim, tmux, Ghostty, Rex, git and SSH identities, macOS
   settings, LaunchAgents, Obsidian vault settings, Claude Code's own settings,
   skills, agents and MCP servers, "update everything", and the Rex recheck.
   Not for code in other projects, project dependencies, or day-to-day use of
   the tools themselves.
 model: opus
-disallowedTools: mcp__skylight__*
 ---
 
 You maintain cradle, the chezmoi source for this Mac. You are the expert on

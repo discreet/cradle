@@ -1,6 +1,7 @@
 # Only what mise can't install: the login shell, its completion framework,
-# mise itself, and GUI apps. chezmoi re-runs this whenever the file changes
-# (see run_onchange_before_10-brew-bundle.sh.tmpl).
+# mise itself, and GUI apps. A chezmoi template, so the terminal app follows
+# this machine's answer; run_onchange_before_10-brew-bundle.sh.tmpl renders
+# it and re-runs whenever the rendered file changes.
 #
 # CLI tools live in ~/.config/mise/config.toml. git comes from the Command
 # Line Tools.
@@ -13,7 +14,7 @@ brew "bash-completion@2"
 brew "mise"
 
 # Apps
-cask "firefox"
+{{- if eq .terminal "ghostty" }}
 cask "ghostty"
+{{- end }}
 cask "obsidian"
-cask "slack"

@@ -98,7 +98,7 @@ and every tag.
 | To add or change | Put it in |
 |---|---|
 | A command-line tool, language server or formatter | `dot_config/mise/config.toml`. Prefer the registry name (`mise registry <name>`), then `github:`/`npm:`/`go:` backends. Use `latest` unless the user wants a pin. Add its bash completion to `run_onchange_after_25-completions.sh.tmpl` if it has one |
-| A GUI app | a `cask` in `Brewfile` |
+| A GUI app | a `cask` in `Brewfile.tmpl` (a template: a terminal's app goes under its `.terminal` branch) |
 | A Homebrew formula | Nowhere, if mise can install it. Only `bash`, `bash-completion@2` and `mise` are formulae |
 | Shell settings, aliases, env | a file in `dot_config/bash/rc.d/` (loaded in name order) |
 | A macOS setting | a `run_onchange_` script using `defaults write`, ideally applied without logging out |
@@ -136,17 +136,25 @@ are listed so they aren't proposed again without a reason.
   every file: with conform's formatter where one is set, otherwise with the
   language server (`lsp_format = "fallback"`), e.g. JSON, shell, Dockerfiles. Helm uses helm-ls;
   towolf/vim-helm was rejected. Plugin versions come from `lazy-lock.json`.
+- **Terminal, per machine:** chezmoi asks `terminal` (chosen 2026-11-20):
+  `ghostty` (Ghostty + tmux, the default) or `rex` (Superlogical's terminal
+  and multiplexer). Each machine gets only its terminal's files: Ghostty's
+  cask and config, tmux (`mise/conf.d/tmux.toml`), `tmux.conf`, `tmux-pick`
+  and the `⌃Space` script, or Rex's `~/.config/rex/init.lua`. Rex has no
+  cask, so it's installed by hand from the tester `.dmg`; `init.lua` holds
+  only keys, actions and hosts (no bindings yet; private hosts go in the
+  unmanaged `local.lua` it loads), and its look, Option key and updates are
+  set by hand in Rex's Settings (README's Terminal section lists them).
+  Ghostty + tmux stays the default because Rex is only an invite-only beta
+  (checked 2026-11-03 with its docs, changelog and beta feedback: still
+  testers only, no cask, no keyboard copy mode, most settings outside its
+  config file). Make `rex` the default when every row of README's "What Rex
+  needs before it's the default" is met; recheck it when asked. That list is
+  about this setup's needs, not tmux/Ghostty habits: with Rex the user will
+  learn its own ways, so don't add rows for recreating tmux keys or
+  workflows, and don't add tmux-like bindings to `init.lua` unprompted.
 - **Ghostty:** built-in `Gruvbox Dark`, block cursor everywhere, both Option
   keys as Alt, SSH terminfo helper off. The first window runs `tmux-pick`.
-  Ghostty + tmux was kept over Rex (Superlogical's terminal and multiplexer)
-  on 2026-11-03, because Rex is only an invite-only beta (rechecked the same
-  day with its docs, changelog and beta feedback: still testers only, no
-  cask, no keyboard copy mode, most settings outside its config file).
-  Switch when every row of README's "What Rex needs before switching" is
-  met; recheck it when asked. That list is about this setup's needs, not
-  tmux/Ghostty habits: with Rex the user will learn its own ways, so don't
-  add rows for recreating tmux keys or workflows. Switching replaces tmux
-  too, so it's breaking.
   Claude reads up on Rex through Superlogical's hosted community MCP server
   (`superlogical`, Discord sign-in via `/mcp`, needs the Rex Beta Discord).
 - **tmux:** lean; prefix `C-Space`. Pane movement stays separate from Neovim's
@@ -175,6 +183,16 @@ are listed so they aren't proposed again without a reason.
   `StrictHostKeyChecking accept-new`, keepalives and `ControlMaster` were
   declined.
 - **Docker:** Colima from mise, started by a LaunchAgent, default VM size.
+- **Apps:** Homebrew installs only Obsidian, plus Ghostty on Ghostty
+  machines. Firefox and Slack were removed on 2026-11-20 (Slack is still
+  used through its claude.ai connector).
+- **Uninstalling (planned, asked 2026-11-20):** cradle only installs. A
+  cask, mise tool, MCP server or file dropped from the repo stays on
+  machines that had it (`brew bundle` without `--cleanup`, `mise install`,
+  `claude mcp add`, chezmoi leaving removed targets). Add a way to remove
+  what the repo no longer lists, e.g. `brew bundle cleanup` with
+  confirmation, `mise prune`, a `.chezmoiremove`, and removing
+  unregistered MCP servers. Until then, say what to uninstall by hand.
 - **Folders:** `~/Documents/work/` and `~/Documents/personal/`, each with
   `code/<org>/<repo>`, its `Obsidian/` vault and other files in topic
   folders next to `code/` (not as vault attachments); `cradle` stays at

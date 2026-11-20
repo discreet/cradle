@@ -88,7 +88,16 @@ fi
 cat <<DONE
      Commits show as Verified only if each email you gave chezmoi is a
      verified email (or the noreply address) on its account.
-  2. Open Ghostty.
+DONE
+if [[ $(chezmoi execute-template '{{ .terminal }}') == rex ]]; then
+  cat <<DONE
+  2. Install Rex from the tester .dmg (Rex Beta Discord), open it and set up
+     its Settings as in README's "Terminal" section.
+DONE
+else
+  echo "  2. Open Ghostty."
+fi
+cat <<DONE
   3. Sign in to Claude Code: claude auth login
 DONE
 if [[ -n $(chezmoi execute-template '{{ .workVaultRepo }}{{ .personalVaultRepo }}') ]]; then

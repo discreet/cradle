@@ -1,7 +1,9 @@
+{{- if eq .terminal "ghostty" -}}
 #!/usr/bin/env bash
 # Turns off macOS's Control-Space shortcut ("Select the previous input
-# source"), which would take the key before tmux sees its prefix. Re-runs when
-# this file changes.
+# source"), which would take the key before tmux sees its prefix. Ghostty +
+# tmux machines only (empty, so skipped, with Rex). Re-runs when this file
+# changes.
 set -euo pipefail
 
 defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 60 '
@@ -16,3 +18,4 @@ defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 60 '
   </dict>'
 # Applies the change without logging out.
 /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
+{{ end -}}

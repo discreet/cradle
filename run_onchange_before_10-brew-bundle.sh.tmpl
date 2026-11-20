@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# Re-runs whenever the Brewfile changes.
-# Brewfile hash: {{ include "Brewfile" | sha256sum }}
+# Installs the Brewfile, rendered for this machine. The rendered Brewfile is
+# part of this script, so it re-runs whenever that changes (the file or the
+# terminal answer).
 set -euo pipefail
 
 eval "$(/opt/homebrew/bin/brew shellenv)"
-brew bundle --file={{ joinPath .chezmoi.sourceDir "Brewfile" | quote }}
+brew bundle --file=- <<'BREWFILE'
+{{ includeTemplate "Brewfile.tmpl" . }}
+BREWFILE

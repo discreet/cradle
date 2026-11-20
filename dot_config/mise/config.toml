@@ -28,9 +28,8 @@ uv = "latest" # manages Python interpreters, venvs and tools
 # Dotfiles
 chezmoi = "latest"
 
-# Editor & terminal multiplexer
+# Editor (tmux, on Ghostty + tmux machines, is in conf.d/tmux.toml)
 neovim = "latest"
-tmux = "latest"
 
 # Search (fzf-lua in Neovim uses both)
 ripgrep = "latest"
@@ -76,4 +75,3 @@ terraform = "latest"
 # AI
 claude-code = "latest"
 "npm:agentdb" = "latest" # vector memory, Claude Code's MCP server (run_onchange_after_45-claude-mcp)
-"npm:skylight-mcp" = "latest" # Skylight Calendar, Claude Code's MCP server (run_onchange_after_45-claude-mcp)

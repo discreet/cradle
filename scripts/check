@@ -32,8 +32,8 @@ have() { command -v "$1" >/dev/null; }
 
 # Rendered three times: work on github.com beside personal, under two orgs,
 # with both Obsidian vaults (most checks use this one); work on its own host,
-# with no vaults; and no work identity, with only a personal vault.
-setup() { # setup <name> <work email> <work host> <work orgs> [work vault] [its private folders] [work folders] [personal vault] [its private folders] [work vault repo] [personal vault repo]
+# with no vaults, on Rex; and no work identity, with only a personal vault.
+setup() { # setup <name> <work email> <work host> <work orgs> [work vault] [its private folders] [work folders] [personal vault] [its private folders] [work vault repo] [personal vault repo] [terminal]
   mkdir -p "$tmp/$1"
   cat >"$tmp/$1.toml" <<EOF
 sourceDir = "$repo"
@@ -50,12 +50,13 @@ sourceDir = "$repo"
   personalVaultPrivate = "${9:-}"
   workVaultRepo = "${10:-}"
   personalVaultRepo = "${11:-}"
+  terminal = "${12:-ghostty}"
 EOF
 }
 vault=$tmp/vault pvault=$tmp/personal-vault remotes=$tmp/remotes
 setup home work@example.com github.com "Example-Org other-org" "$vault" "Team Stuff; Private/HR/" \
   "$tmp/work;$tmp/clients b" "$pvault" "Diary/" "$remotes/work.git" "$remotes/personal.git"
-setup home-selfhosted work@example.com git.example.com ""
+setup home-selfhosted work@example.com git.example.com "" "" "" "" "" "" "" "" rex
 setup home-personal "" "" "" "" "" "" "$pvault" "" "" "$remotes/personal.git"
 home2=$tmp/home-personal
 home3=$tmp/home-selfhosted
@@ -94,6 +95,22 @@ lua_syntax() {
       local ok, err = loadfile(f)
       if not ok then io.stderr:write(err .. '\n'); vim.cmd('cquit') end
     end" -c qall
+}
+terminal_files() { # Ghostty + tmux, or Rex: only that terminal's files, apps and tools
+  local f bad=0 brew
+  for f in .config/ghostty/config .config/tmux/tmux.conf .config/mise/conf.d/tmux.toml .local/bin/tmux-pick; do
+    [[ -e $home/$f ]] || { echo "missing with Ghostty: $f"; bad=1; }
+    [[ ! -e $home3/$f ]] || { echo "installed with Rex: $f"; bad=1; }
+  done
+  [[ ! -e $home/.config/rex ]] || { echo "Rex config with Ghostty"; bad=1; }
+  [[ -f $home3/.config/rex/init.lua ]] || { echo "no Rex config with Rex"; bad=1; }
+  brew=$(cz execute-template <"$repo/Brewfile.tmpl")
+  grep -qx 'cask "ghostty"' <<<"$brew" || { echo "Brewfile lacks Ghostty"; bad=1; }
+  ! czh home-selfhosted execute-template <"$repo/Brewfile.tmpl" | grep -q ghostty || { echo "Brewfile has Ghostty with Rex"; bad=1; }
+  [[ -n $(cz execute-template <"$repo/run_onchange_after_40-macos-shortcuts.sh.tmpl") ]] || { echo "no Control-Space script with Ghostty"; bad=1; }
+  [[ -z $(czh home-selfhosted execute-template <"$repo/run_onchange_after_40-macos-shortcuts.sh.tmpl" | tr -d '[:space:]') ]] ||
+    { echo "Control-Space script runs with Rex"; bad=1; }
+  return "$bad"
 }
 identity() { # identity <home> <remote url> <email> <signing key> [rewritten url]
   local dir=$tmp/identity got
@@ -415,12 +432,14 @@ fi
 init_answers() { # renders .chezmoi.toml.tmpl with a full set of answers
   cz_new execute-template --init \
   --promptString "Full name=Check,Personal git email (your GitHub noreply address keeps it private)=personal@example.com,Work git email (leave blank if this machine has no work identity)=work@example.com,Work git host such as gitlab.com or git.example.com=gitlab.com,Work orgs or groups exactly as in repo URLs (space-separated; blank if every repo on that host is work)=,Folders for Claude's work memory in or outside git (separated by semicolons; blank for none)=~/work; ~/clients b/,Work Obsidian vault folder for daily notes and the journal (leave blank for none)=~/Work Notes/,Work vault folders Claude must not read (separated by semicolons; blank for none)=HR,Personal Obsidian vault folder (leave blank for none)=~/Notes,Personal vault folders Claude must not read (separated by semicolons; blank for none)=,Private git repo on the work host to back up the work vault to (SSH URL; blank for none)=git@example.com:org/notes.git,Private git repo to back up the personal vault to (SSH URL; blank for none)=" \
+  --promptChoice "Terminal: ghostty (Ghostty with tmux) or rex (Rex, installed by hand)=rex" \
   <"$repo/.chezmoi.toml.tmpl"
 }
 check "chezmoi init questions render" init_answers
 check "chezmoi init: work folders get ~ expanded, trailing / dropped" grep -qF "workFolders = \"$tmp/new/work;$tmp/new/clients b\"" <(init_answers)
 check "chezmoi init: vaults get ~ expanded, trailing / dropped" \
   grep -qF "workVault = \"$tmp/new/Work Notes\"" <(init_answers)
+check "chezmoi init: terminal answer saved" grep -qF 'terminal = "rex"' <(init_answers)
 refuses() { # refuses <expected message> <command...>: fails, saying that
   local out
   if out=$("${@:2}" 2>&1); then echo "it didn't refuse"; return 1; fi
@@ -432,6 +451,8 @@ check "chezmoi init refuses github.com work without orgs" \
   <.chezmoi.toml.tmpl
 check ".chezmoiexternal.toml is valid TOML" toml "$repo/.chezmoiexternal.toml"
 check "mise config is valid TOML" toml "$home/.config/mise/config.toml"
+check "mise conf.d/tmux.toml is valid TOML" toml "$home/.config/mise/conf.d/tmux.toml"
+check "terminal: Ghostty + tmux or Rex, each gets only its own" terminal_files
 
 for f in bootstrap.sh scripts/check .githooks/commit-msg run_*; do
   check "shellcheck $f" sc_script "$f"
@@ -522,6 +543,7 @@ check "JSON settings parse" jq empty "$repo"/obsidian/*.json "$home/.config/clau
 
 if have nvim; then
   check "Neovim Lua syntax" lua_syntax "$home/.config/nvim"
+  check "Rex init.lua syntax" lua_syntax "$home3/.config/rex"
   if [[ -d $HOME/.local/share/nvim/lazy ]]; then
     check "Neovim starts without errors" nvim_start
   else
@@ -529,6 +551,12 @@ if have nvim; then
   fi
 else
   skip "Neovim (not installed)"
+fi
+
+if have rex; then
+  check "Rex checks its config" rex config check "$home3/.config/rex/init.lua"
+else
+  skip "Rex (not installed)"
 fi
 
 ghostty=/Applications/Ghostty.app/Contents/MacOS/ghostty
@@ -540,7 +568,9 @@ else
 fi
 
 if have brew; then
-  check "Brewfile parses" brew bundle list --all --file="$repo/Brewfile"
+  brewfile() { czh "$1" execute-template <"$repo/Brewfile.tmpl" | brew bundle list --all --file=-; }
+  check "Brewfile parses (Ghostty)" brewfile home
+  check "Brewfile parses (Rex)" brewfile home-selfhosted
 else
   skip "Brewfile (Homebrew not installed)"
 fi
