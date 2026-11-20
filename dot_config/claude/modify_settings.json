@@ -51,6 +51,9 @@
 {{-   $on := list (dict "hooks" (list $check)) -}}
 {{-   $hooks = dict "SessionStart" $on "UserPromptSubmit" $on -}}
 {{- end -}}
+{{- /* Every machine: starting, resuming or clearing a session shows the user its custom agents. */ -}}
+{{- $agents := dict "type" "command" "command" (joinPath .chezmoi.homeDir ".local/bin/claude-agents") -}}
+{{- $_ := set $hooks "SessionStart" (append (get $hooks "SessionStart" | default list) (dict "matcher" "startup|resume|clear" "hooks" (list $agents))) -}}
 {{- /*
   Rex machines: Rex's own hook, as `rex skill setup` writes it, so Rex can
   tell which session Claude runs in. rex is on PATH only in Rex's terminals.
@@ -59,7 +62,5 @@
 {{-   $rex := dict "type" "command" "command" "/bin/sh -c 'rex __internal session-start --agent claude 2>/dev/null || true'" "timeout" 5 -}}
 {{-   $_ := set $hooks "SessionStart" (append (get $hooks "SessionStart" | default list) (dict "hooks" (list $rex))) -}}
 {{- end -}}
-{{- if $hooks -}}
-{{-   $_ := set $managed "hooks" $hooks -}}
-{{- end -}}
+{{- $_ := set $managed "hooks" $hooks -}}
 {{- mergeOverwrite $live $managed | toPrettyJson "  " }}

@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Claude Code SessionStart hook: shows the user the custom agents this session
+# can use, as Claude Code finds them: user agents in $CLAUDE_CONFIG_DIR/agents,
+# project agents in every .claude/agents/ from the session's folder up to its
+# repo root (the closest wins, and a project agent hides a user agent of the
+# same name). Each gets its name and the first sentence of its description.
+# Read at runtime, so nothing about which agents exist lives in the repo.
+# It only ever prints a message for the user; it never fails a session start.
+set -uo pipefail
+
+cwd=$(jq -r '.cwd // empty' 2>/dev/null) || cwd=""
+[[ -d $cwd ]] || cwd=$PWD
+user=${CLAUDE_CONFIG_DIR:-$HOME/.claude}/agents
+
+# agents <scope> <dir>: "scope<TAB>name<TAB>description" for each agent file in
+# dir (recursive, through symlinks; broken links and files without a name and
+# description are skipped, as Claude Code skips them).
+agents() {
+  [[ -d $2 ]] || return 0
+  find -L "$2" -type f -name '*.md' 2>/dev/null | sort | while IFS= read -r f; do
+    awk -v scope="$1" '
+      function unquote(s) {
+        sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s)
+        if (s ~ /^".*"$/ || s ~ /^\047.*\047$/) s = substr(s, 2, length(s) - 2)
+        return s
+      }
+      { sub(/\r$/, "") }
+      NR == 1 { if ($0 !~ /^---[[:space:]]*$/) exit; next }
+      /^---[[:space:]]*$/ { exit }
+      more && /^[[:space:]]+[^[:space:]]/ { sub(/^[[:space:]]+/, ""); d = d (d == "" ? "" : " ") $0; next }
+      { more = 0 }
+      /^name:/ { n = $0; sub(/^name:/, "", n); n = unquote(n) }
+      /^description:/ {
+        d = $0; sub(/^description:/, "", d); d = unquote(d); more = 1
+        if (d ~ /^[>|][-+]?$/) d = ""
+      }
+      END { gsub(/\t/, " ", d); if (n != "" && d != "") print scope "\t" n "\t" d }
+    ' "$f" 2>/dev/null
+  done
+}
+
+{
+  dir=$cwd
+  top=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null) || top=$cwd
+  while :; do
+    [[ $dir/.claude/agents -ef $user ]] || agents project "$dir/.claude/agents"
+    [[ $dir == "$top" || $dir == / ]] && break
+    dir=$(dirname "$dir")
+  done
+  agents user "$user"
+} | jq -Rcs '
+  [split("\n")[] | select(length > 0) | split("\t") | {scope: .[0], name: .[1], desc: .[2]}]
+  | reduce .[] as $a ([]; if any(.[]; .name == $a.name) then . else . + [$a] end)
+  | select(length > 0)
+  | (map(.name | length) | max) as $w
+  | def short: (capture("^(?<s>.*?[.!?])(\\s|$)").s // .)
+      | if length > 72 then .[0:71] + "…" else . end;
+    def group($scope; $title):
+      map(select(.scope == $scope)) | sort_by(.name) | select(length > 0)
+      | ["\($title):"] + map("  \(.name + " " * ($w - (.name | length)))  \(.desc | short)");
+    {systemMessage: ([group("user"; "User agents"), group("project"; "Project agents")] | add | join("\n"))}
+' 2>/dev/null
+exit 0

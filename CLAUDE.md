@@ -108,7 +108,8 @@ and every tag.
 | A file from someone else's repo | `.chezmoiexternal.toml`, pinned to a commit, with a link to its history above the entry |
 | A Neovim plugin | `dot_config/nvim/lua/plugins/`; then `chezmoi re-add ~/.config/nvim/lazy-lock.json` after it installs. Its language server goes in mise and `vim.lsp.enable` in `plugins/lsp.lua` |
 | Claude Code settings, plugins, MCP servers | see the Claude Code section of README.md |
-| A Claude Code agent | `dot_config/claude/agents/<name>.md`, only when it needs other tools, model or its own context; know-how alone is a skill. A row in README's Claude Code table |
+| A Claude Code agent | `dot_config/claude/agents/<name>.md`, only when it needs other tools, model or its own context; know-how alone is a skill. A row in README's Claude Code table. The session-start list (`claude-agents`) finds it by itself |
+| A Claude Code hook | its script in `dot_local/bin/`, registered in `dot_config/claude/modify_settings.json`'s `$hooks` (appended, so others' hooks stay); `scripts/check` asserts each machine's exact SessionStart list |
 | How `cradle-maintainer` works | `dot_config/claude/agents/cradle-maintainer.md`. Rules and decisions stay in this file, which it reads each time; don't copy them into the agent |
 | Obsidian settings or vault templates | `obsidian/`, applied to the work vault by `run_onchange_after_35-obsidian.sh.tmpl` (JSON settings are merged into the vault's `.obsidian/` files) |
 | A file in the repo that must not land in `~` | `.chezmoiignore` (names starting with `.` are skipped already) |

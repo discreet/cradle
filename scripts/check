@@ -190,7 +190,8 @@ personal_vault_only() { # no journal, hooks or daily notes; the vault is still C
   done
   grep -qF "personal Obsidian vault is \`$pvault\`" "$h/.config/claude/CLAUDE.md" || { echo "CLAUDE.md doesn't name the vault"; bad=1; }
   ! grep -qe 'journal. skill' -e 'Daily notes' "$h/.config/claude/CLAUDE.md" || { echo "CLAUDE.md mentions the journal"; bad=1; }
-  jq -e --arg p "$pvault" '.permissions.additionalDirectories == [$p] and .hooks == null and .permissions.deny == null
+  jq -e --arg p "$pvault" --arg h "$h" '.permissions.additionalDirectories == [$p] and .permissions.deny == null
+    and ([.hooks[][].hooks[].command] == ["\($h)/.local/bin/claude-agents"])
     and .permissions.allow == ["Bash(vault-sync)"]' \
     "$h/.config/claude/settings.json" >/dev/null || { echo "settings: wrong vault access or hooks"; bad=1; }
   return "$bad"
@@ -204,10 +205,45 @@ no_obsidian() {
   jq -e '.permissions.additionalDirectories == null and .hooks.UserPromptSubmit == null
     and ([.. | .command? // empty | select(test("journal-check"))] == [])' \
     "$h/.config/claude/settings.json" >/dev/null || { echo "settings add a vault or journal hooks"; bad=1; }
-  # This test machine uses Rex, so only Rex's own hook starts sessions.
-  jq -e '[.hooks.SessionStart[].hooks[].command] == ["/bin/sh -c '"'"'rex __internal session-start --agent claude 2>/dev/null || true'"'"'"]' \
+  # This test machine uses Rex, so only the agent list and Rex's own hook start sessions.
+  jq -e --arg h "$h" '[.hooks.SessionStart[].hooks[].command] == ["\($h)/.local/bin/claude-agents",
+    "/bin/sh -c '"'"'rex __internal session-start --agent claude 2>/dev/null || true'"'"'"]' \
     "$h/.config/claude/settings.json" >/dev/null || { echo "no Rex hook with Rex"; bad=1; }
   return "$bad"
+}
+claude_agents() { # the SessionStart hook lists user and project agents as Claude Code finds them
+  local a=$tmp/agents hook=$home/.local/bin/claude-agents out want
+  mkdir -p "$a/config/agents/sub" "$a/repo/sub/dir/.claude/agents" "$a/repo/.claude/agents" "$a/linked" "$a/none"
+  git -C "$a/repo" init -q
+  agent() { printf -- '---\n%s\n---\nBody.\n' "$2" >"$1"; }
+  agent "$a/config/agents/quoted.md" $'name: "quoted"\ndescription: \'Does one thing. Then more.\''
+  agent "$a/config/agents/sub/folded.md" $'name: folded\ndescription: >\n  Folded over\n  two lines! More.\nmodel: opus'
+  agent "$a/config/agents/mine.md" $'name: mine\ndescription: Hidden by the project one.'
+  agent "$a/config/agents/nodesc.md" 'name: nodesc'
+  echo 'No frontmatter.' >"$a/config/agents/plain.md"
+  ln -s "$a/missing.md" "$a/config/agents/broken.md"
+  agent "$a/linked/long.md" "name: long
+description: $(printf 'word %.0s' {1..20})end."
+  ln -s "$a/linked/long.md" "$a/config/agents/long.md"
+  agent "$a/repo/.claude/agents/mine.md" $'name: mine\ndescription: The project\'s own.'
+  agent "$a/repo/.claude/agents/near.md" $'name: near\ndescription: Farther away.'
+  agent "$a/repo/sub/dir/.claude/agents/near.md" $'name: near\ndescription: Closest wins.'
+  out=$(jq -n --arg cwd "$a/repo/sub/dir" '{cwd: $cwd, source: "startup"}' |
+    CLAUDE_CONFIG_DIR=$a/config "$hook" | jq -r .systemMessage) || return 1
+  want="User agents:
+  folded  Folded over two lines!
+  long    $(printf 'word %.0s' {1..14})w…
+  quoted  Does one thing.
+Project agents:
+  mine    The project's own.
+  near    Closest wins."
+  [[ $out == "$want" ]] || { diff <(echo "$want") <(echo "$out"); return 1; }
+  out=$(jq -n --arg cwd "$a/none" '{cwd: $cwd}' | CLAUDE_CONFIG_DIR=$a/none "$hook") || return 1
+  [[ -z $out ]] || { echo "output with no agents: $out"; return 1; }
+  echo 'not json' | CLAUDE_CONFIG_DIR=$a/config "$hook" >/dev/null || { echo "failed on bad input"; return 1; }
+  jq -e --arg h "$home" 'any(.hooks.SessionStart[]; .matcher == "startup|resume|clear"
+    and .hooks == [{type: "command", command: "\($h)/.local/bin/claude-agents"}])' \
+    "$home/.config/claude/settings.json" >/dev/null || { echo "no agent list hook"; return 1; }
 }
 is_work() { # git identity or work folder; anything else, or no work identity, is personal
   local w=$tmp/is-work bad=0
@@ -545,6 +581,7 @@ for f in "$home"/Library/LaunchAgents/*.plist; do
   check "plist ${f##*/}" plutil -lint "$f"
 done
 check "Claude settings merge over a live file" claude_merge
+check "Claude: session start lists user and project agents" claude_agents
 check "is-work: work by git identity or work folder, else personal" is_work
 check "Obsidian: both vaults open, private folders blocked" obsidian_settings
 check "Obsidian: global instructions name both vaults and private folders" obsidian_instructions
