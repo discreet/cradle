@@ -187,7 +187,9 @@ are listed so they aren't proposed again without a reason.
 - **Docker:** Colima from mise, started by a LaunchAgent, default VM size.
 - **Apps:** Homebrew installs only Obsidian, plus Ghostty on Ghostty
   machines. Firefox and Slack were removed on 2026-11-20 (Slack is still
-  used through its claude.ai connector).
+  used through its claude.ai connector). The Slack app comes pre-installed
+  and required on work machines, outside cradle: leave it, and don't
+  suggest uninstalling it or count it as left over.
 - **Uninstalling (planned, asked 2026-11-20):** cradle only installs. A
   cask, mise tool, MCP server or file dropped from the repo stays on
   machines that had it (`brew bundle` without `--cleanup`, `mise install`,
