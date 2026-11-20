@@ -110,3 +110,8 @@ if [[ -n $(chezmoi execute-template '{{ .workVault }}{{ .personalVault }}') ]]; 
     echo "     Then run chezmoi apply, so the work vault gets its daily notes."
   fi
 fi
+cat <<DONE
+  6. Sign in to the cloud CLIs you use: gh auth login (choose SSH, skip
+     uploading a key), gt auth --token <token>, gcloud auth login,
+     gcloud auth application-default login.
+DONE

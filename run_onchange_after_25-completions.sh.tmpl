@@ -13,8 +13,10 @@ mkdir -p "$dir"
 
 ln -sf /Library/Developer/CommandLineTools/usr/share/git-core/git-completion.bash "$dir/git"
 
-for tool in kubectl helm k9s chezmoi docker colima; do
+for tool in kubectl helm k9s chezmoi docker colima gh; do
   "$tool" completion bash >"$dir/$tool"
 done
 uv generate-shell-completion bash >"$dir/uv"
 rg --generate complete-bash >"$dir/rg"
+gt completion >"$dir/gt"
+cp "$(mise where gcloud)/completion.bash.inc" "$dir/gcloud"

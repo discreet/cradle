@@ -130,7 +130,23 @@ are listed so they aren't proposed again without a reason.
   purpose. History isn't shared live between shells. Deep paths aren't
   trimmed.
 - **Python:** uv, no conda. Ruby and Rust are dropped. node exists only for
-  npm-based language servers.
+  npm-based language servers. mise installs one global Python only because
+  gcloud's macOS installer needs that exact minor (3.14 for now) and fails
+  without it (tested 2026-11-20); it's pinned to what gcloud asks for and
+  installed before gcloud (`depends`). Projects still get theirs from uv.
+- **Cloud CLIs:** `aws-cli` with AWS's Session Manager plugin (for `aws
+  ssm start-session`), and `gcloud` (GCP auth, ADC, impersonation), both
+  added 2026-11-20, all from mise. The `gcloud-cli` cask was rejected: it
+  needs Homebrew's `python@3.14` formula and auto-updates outside mise. So
+  was the `session-manager-plugin` cask: a `.pkg` installed with `sudo`;
+  mise's `aqua:` backend takes the plugin from AWS's own zip instead.
+  Credentials and config stay per machine (`~/.config/gcloud`), never in
+  this repo.
+- **GitHub CLIs:** `gh` (added back 2026-11-20 for PRs) and Graphite's
+  `gt` (stacked PRs, added 2026-11-20), both from mise. Sign gh in
+  with SSH as the git protocol so it doesn't become git's credential
+  helper; the git identity rules below stay in charge of which key and
+  email a repo uses.
 - **Neovim:** lazy.nvim, built-in LSP and completion, conform for formatting,
   fzf-lua, gitsigns, vim-sleuth. Leader is `,`. Arrow keys stay disabled.
   Trailing whitespace is trimmed by hand (`,W`), not on save. Saving formats
@@ -250,7 +266,8 @@ are listed so they aren't proposed again without a reason.
   journal; Drive, Docs and Sheets for searching and editing), connected in
   the claude.ai account, so nothing for it lives in this repo beyond the
   journal. A local Google MCP server, Workspace APIs with an OAuth client,
-  `gcloud`, and the Google Drive desktop app were not chosen.
+  `gcloud`, and the Google Drive desktop app were not chosen for Workspace
+  (`gcloud` is installed for GCP only, see Cloud CLIs).
 - **claude.ai connectors** are the default for anything that talks to a
   hosted service the user already signs in to, over local MCP servers with
   tokens. README's "claude.ai connectors" table lists every connector and
@@ -295,7 +312,9 @@ When the user asks to update, do these in order and report what changed:
 
 1. **Tools:** `mise outdated`, then `mise upgrade` (versions under a week old
    are skipped; see Decisions). Check whether a pinned tool can go back to
-   `latest` (agentdb: a newer release with provenance). Drop any `minimum_release_age_excludes` entry
+   `latest` (agentdb: a newer release with provenance), and whether
+   gcloud now wants a newer Python (`mise install` warns "Python 3.X was
+   not found"; bump `python` to it). Drop any `minimum_release_age_excludes` entry
    whose reason no longer holds. This covers Claude Code and
    the language servers. Then regenerate bash completions for the new
    versions (chezmoi only reruns that script when mise's config changes):

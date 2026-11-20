@@ -130,9 +130,16 @@ versions in `lazy-lock.json`. It ends by listing the steps below.
    folder. Then run `chezmoi apply` once, so the work vault gets its Daily
    notes settings and templates. Optionally, give "Templates: Insert
    template" a hotkey (Settings → Hotkeys) to start meeting notes quickly.
-6. **Optional: Rex's community MCP server.** In Claude Code, `/mcp`, pick
+6. **Sign in to the cloud CLIs you use:** `gh auth login` (choose SSH as
+   the git protocol and skip uploading a key, so git keeps using cradle's
+   keys; `gh auth login` again for a second account, `gh auth switch` to
+   change), `gt auth --token <token>` (from Graphite's web app),
+   `gcloud auth login` and `gcloud auth application-default login` (for
+   Terraform and other tools using Google's libraries). Credentials stay on
+   the machine.
+7. **Optional: Rex's community MCP server.** In Claude Code, `/mcp`, pick
    `superlogical` and sign in with Discord.
-7. **Check it all:** `chezmoi status` should print nothing, `mise ls` should
+8. **Check it all:** `chezmoi status` should print nothing, `mise ls` should
    show every tool installed, and `scripts/check` in `~/Documents/cradle`
    should pass.
 
@@ -504,9 +511,9 @@ or MCP server:
 | `bash` | Same drop-in folder, moved to `~/.config/bash/rc.d`. The prompt shows path and git state via git's own `__git_ps1` (`*` unstaged, `+` staged, `%` untracked), `user@host` only over SSH, and a red `❯` after a failed command; the kube namespace and terraform workspace are gone. History is timestamped and saved per command but no longer shared live between open shells. A readline `inputrc` adds case-insensitive completion and prefix history search on Up/Down and `C-p`/`C-n`. `go install` targets `~/.local/bin`. Completions are generated once and lazy-loaded by bash-completion@2. `KUBECONFIG` is back to the default `~/.kube/config` |
 | `asdf` | mise |
 | `go`, `kubectl`, `helm`, `terraform` | mise (`latest` globally, pinned per project) |
-| `python`, `miniconda`, `base-env.yaml` | uv; Python versions and environments are per project |
+| `python`, `miniconda`, `base-env.yaml` | uv; Python versions and environments are per project. mise keeps one global Python, pinned to the version gcloud needs |
 | `ruby`, `rust` | Dropped (Rust was only there to build Alacritty) |
-| `packages` | mise for CLI tools, Brewfile for apps. Homebrew git is replaced by Apple's. Removed: `ack` (use ripgrep), `tree`, `exa`, `aws-iam-authenticator` (use `aws eks get-token`), compiler libraries asdf needed, `ansible`, `argo`, `mkdocs`, `ctags`, `brew-cask-completion`, `curl`, `wget`, `make`, `telnet`, `watch`, `ncdu`, `gopass`, `ccrypt`, `aws-vault`, `coreutils`, `gnu-sed`, `gnu-tar`, `jq` (macOS ships it), `yq`, `gh`, `kubectx` (use k9s or `kubectl config`), `bats-core`, and the Keybase, Signal, Chrome, Hammerspoon and Karabiner apps |
+| `packages` | mise for CLI tools, Brewfile for apps. Homebrew git is replaced by Apple's. Removed: `ack` (use ripgrep), `tree`, `exa`, `aws-iam-authenticator` (use `aws eks get-token`), compiler libraries asdf needed, `ansible`, `argo`, `mkdocs`, `ctags`, `brew-cask-completion`, `curl`, `wget`, `make`, `telnet`, `watch`, `ncdu`, `gopass`, `ccrypt`, `aws-vault`, `coreutils`, `gnu-sed`, `gnu-tar`, `jq` (macOS ships it), `yq`, `kubectx` (use k9s or `kubectl config`), `bats-core`, and the Keybase, Signal, Chrome, Hammerspoon and Karabiner apps |
 | `vim` | Neovim. NeoBundle is now lazy.nvim. ALE, vim-go and black are now LSP and conform, with Neovim's built-in completion. Helm charts get helm-ls and Compose files get Docker's language server (filetype rules in `lua/config/filetypes.lua`). polyglot and the syntax plugins are replaced by Neovim's built-in syntax highlighting. ack.vim is now fzf-lua. gitgutter is now gitsigns. Dropped: fugitive, surround, repeat, endwise, targets, tabular, indent guides, vim-test, markdown-preview and TypeScript support |
 | `git` | Separate personal (GitHub) and work (any git host) identities, chosen by the repo's remote. Commits and tags are signed with SSH, not GPG. `git pull` rebases instead of merging. Current git settings are added (zdiff3, histogram diff, autoSetupRemote, etc.); settings that are now git's or Apple's defaults are dropped. Aliases that duplicated others or that signing-by-default made redundant (`ca`, `amend`, `ci`, `cs`, `csa`, `ris`, `tsa`, `dc`, `head`, `fap`, `r`, `ra`, `lg`, `lgs`) are removed, as are the rarely used `rero`, `rht`, `dh1`, `ff`, `ms`, `mc`, `ignore`/`ignored`/`acknowledge`, and the plain shortcuts `co`, `sw`, `b`, `aa`, `di`, `ds`, `rc`, `fa`, `dlb`, `drb`. Fetch no longer prunes local tags. The log aliases share one `--pretty=line` format |
 | `gpg` | Dropped. SSH keys go in the macOS keychain instead of gpg-agent |

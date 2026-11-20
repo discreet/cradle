@@ -25,6 +25,10 @@ uv = "latest" # manages Python interpreters, venvs and tools
 # Dotfiles
 chezmoi = "latest"
 
+# GitHub: gh for PRs and issues, Graphite's gt for stacked PRs
+gh = "latest"
+graphite = "latest"
+
 # Editor (tmux, on Ghostty + tmux machines, is in conf.d/tmux.toml)
 neovim = "latest"
 
@@ -64,6 +68,12 @@ docker-compose = "latest"
 
 # Cloud & Kubernetes
 aws-cli = "latest"
+"aqua:aws/session-manager-plugin" = "latest" # for `aws ssm start-session`
+# Google Cloud CLI. Its macOS installer needs one exact Python minor and
+# fails without it, so python is pinned to that minor and installed first.
+# When `mise install` warns "Python 3.X was not found", bump the pin to 3.X.
+python = "3.14"
+gcloud = { version = "latest", depends = ["python"] }
 kubectl = "latest"
 helm = "latest"
 k9s = "latest"
