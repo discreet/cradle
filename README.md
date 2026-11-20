@@ -41,12 +41,14 @@ run, and a few steps only you can do afterwards.
 - **Work identity** (skip on a personal-only Mac): your work email, the work
   git host (`github.com`, `gitlab.com` or a self-hosted name), your account
   there, and the orgs or groups that are work, exactly as they appear in repo
-  URLs. The orgs are required when the work host is `github.com`, since
+  URLs, plus your work account's own name if any work repos live under it
+  rather than in an org. The orgs are required when the work host is `github.com`, since
   personal repos are there too.
 - **Two private repos for the Obsidian vault backups**, with their SSH URLs.
   Each should be empty, or already hold that vault's notes. The personal one
-  goes on your GitHub account. The work one goes on the work host, inside a
-  work org, so it's committed and pushed as work. Skip a repo to leave that
+  goes on your GitHub account. The work one goes on the work host, in a work
+  org or under your work account (then give that account's name as a work
+  org too), so it's committed and pushed as work. Skip a repo to leave that
   vault without a backup.
 - **Discord account in the Rex Beta Discord**: needed to download Rex if
   this machine will use it, and optional otherwise, for the `superlogical`
@@ -63,7 +65,7 @@ other questions only when you give the vault.
 | Personal git email | Your GitHub noreply address |
 | Work git email | Blank on a personal-only Mac |
 | Work git host | e.g. `github.com` |
-| Work orgs or groups | Space-separated, as in repo URLs |
+| Work orgs, groups or accounts | Space-separated, as in repo URLs. Include your work account's own name if work repos live under it (e.g. the work vault's backup repo) |
 | Folders for Claude's work memory | `~/Documents/work` |
 | Work Obsidian vault folder | `~/Documents/work/Obsidian` |
 | Work vault folders Claude must not read | Folder names inside the vault, `;` between them |
@@ -421,8 +423,8 @@ or MCP server:
 - **Backups:** Obsidian doesn't sync between machines here; each vault is
   its own private git repo instead (chezmoi asks for the SSH URLs). Create
   them empty first: the personal one on your GitHub account, the work one on
-  the work host, in a work org, so git commits and pushes with the work
-  identity. `vault-sync` runs every evening at 18:00, started by the
+  the work host, in a work org or under your work account listed among the
+  work orgs, so git commits and pushes with the work identity. `vault-sync` runs every evening at 18:00, started by the
   journal's run once today's note is written (on a machine without a work
   vault, by its own LaunchAgent); again after the journal skill fills in the
   Slack and Meetings summaries in your next session (Claude may run it

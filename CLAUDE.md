@@ -166,7 +166,9 @@ are listed so they aren't proposed again without a reason.
   GitHub; work can be any git host (GitHub, GitLab, self-hosted), so nothing
   may assume GitHub for work. Each machine is asked for a name, a personal
   email, and optionally a work email, work host, work orgs/groups (blank:
-  the whole host is work; required when the work host is github.com) and work
+  the whole host is work; required when the work host is github.com; the
+  work account's own namespace is listed here too when work repos, like the
+  work vault's backup, live under it) and work
   folders (for agentdb only; git still goes by remote). Repos
   whose remote matches use the work email and `~/.ssh/id_ed25519_work`; SSH
   remotes reach the host through the `git-work` SSH alias (git rewrites their

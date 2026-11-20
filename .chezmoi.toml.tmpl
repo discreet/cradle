@@ -7,12 +7,16 @@
 {{- $workFolders := "" -}}
 {{- if $workEmail -}}
 {{-   $workHost = promptStringOnce . "workHost" "Work git host such as gitlab.com or git.example.com" -}}
-{{-   $workOrgs = promptStringOnce . "workOrgs" "Work orgs or groups exactly as in repo URLs (space-separated; blank if every repo on that host is work)" -}}
+{{-   $workOrgs = promptStringOnce . "workOrgs" "Work orgs/groups/accounts exactly as in repo URLs; your work account's own too if it has repos (space-separated; blank if every repo on that host is work)" -}}
 {{-   $workFolders = promptStringOnce . "workFolders" "Folders for Claude's work memory in or outside git (separated by semicolons; blank for none)" -}}
 {{-   $folders := list -}}
 {{-   range splitList ";" $workFolders -}}
 {{-     $f := trim . | trimSuffix "/" -}}
-{{-     if $f -}}{{ $folders = append $folders (regexReplaceAll "^~" $f $.chezmoi.homeDir) }}{{ end -}}
+{{-     if $f -}}
+{{-       $f = regexReplaceAll "^~/" $f (printf "%s/" $.chezmoi.homeDir) -}}
+{{-       if not (hasPrefix "/" $f) -}}{{ fail (printf "Work folder %q must be a full path or start with ~/." $f) }}{{ end -}}
+{{-       $folders = append $folders $f -}}
+{{-     end -}}
 {{-   end -}}
 {{-   $workFolders = join ";" $folders -}}
 {{-   if not $workHost -}}
@@ -31,7 +35,8 @@
 {{- if $workEmail -}}
 {{-   $workVault = promptStringOnce . "workVault" "Work Obsidian vault folder for daily notes and the journal (leave blank for none)" (get . "obsidianVault" | default "") -}}
 {{-   if $workVault -}}
-{{-     $workVault = regexReplaceAll "^~" $workVault .chezmoi.homeDir | trimSuffix "/" -}}
+{{-     $workVault = regexReplaceAll "^~/" $workVault (printf "%s/" .chezmoi.homeDir) | trimSuffix "/" -}}
+{{-     if not (hasPrefix "/" $workVault) -}}{{ fail (printf "Work vault folder %q must be a full path or start with ~/." $workVault) }}{{ end -}}
 {{-     $workVaultPrivate = promptStringOnce . "workVaultPrivate" "Work vault folders Claude must not read (separated by semicolons; blank for none)" (get . "obsidianPrivate" | default "") -}}
 {{-     $workVaultRepo = promptStringOnce . "workVaultRepo" "Private git repo on the work host to back up the work vault to (SSH URL; blank for none)" -}}
 {{-   end -}}
@@ -40,7 +45,8 @@
 {{- $personalVaultPrivate := "" -}}
 {{- $personalVaultRepo := "" -}}
 {{- if $personalVault -}}
-{{-   $personalVault = regexReplaceAll "^~" $personalVault .chezmoi.homeDir | trimSuffix "/" -}}
+{{-   $personalVault = regexReplaceAll "^~/" $personalVault (printf "%s/" .chezmoi.homeDir) | trimSuffix "/" -}}
+{{-   if not (hasPrefix "/" $personalVault) -}}{{ fail (printf "Personal vault folder %q must be a full path or start with ~/." $personalVault) }}{{ end -}}
 {{-   $personalVaultPrivate = promptStringOnce . "personalVaultPrivate" "Personal vault folders Claude must not read (separated by semicolons; blank for none)" -}}
 {{-   $personalVaultRepo = promptStringOnce . "personalVaultRepo" "Private git repo to back up the personal vault to (SSH URL; blank for none)" -}}
 {{- end -}}
