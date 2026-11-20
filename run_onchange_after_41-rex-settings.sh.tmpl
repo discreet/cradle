@@ -1,0 +1,21 @@
+{{- if eq .terminal "rex" -}}
+#!/usr/bin/env bash
+# Rex's Settings that differ from its defaults, to match Ghostty's config.
+# Rex keeps Settings in macOS defaults; Rex machines only (empty, so
+# skipped, with Ghostty). Re-runs when this file changes. Rex's defaults
+# already match the rest (font size 12, padding X 10, block cursor without
+# blinking, Option as Alt, key sequence hints), so they aren't repeated here.
+# The Gruvbox Dark theme is imported by hand once (README: Terminal); dark
+# appearance below keeps it on whatever macOS's appearance is.
+set -euo pipefail
+
+d=com.superlogical.rex
+defaults write $d Workspace.appearance -string dark
+defaults write $d Workspace.terminalPaddingY -float 10
+# The shell can't change the cursor (Ghostty: shell-integration no-cursor).
+defaults write $d Workspace.terminalCursorStyleForced -bool true
+# Updates only when asked: notify, never download or install on its own.
+defaults write $d rex.developer-mode-enabled -bool true
+defaults write $d RexAppUpdateAutomation -string notify
+defaults write $d SUAutomaticallyUpdate -bool false
+{{ end -}}

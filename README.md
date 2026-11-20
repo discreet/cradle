@@ -116,8 +116,9 @@ versions in `lazy-lock.json`. It ends by listing the steps below.
    gave chezmoi is verified (or is the noreply address) on its account.
 2. **Open the terminal.** Ghostty: its first window starts tmux
    (`tmux-pick`). Rex: install it from the tester `.dmg` (Rex Beta Discord),
-   then set the Settings that can't live in a file (see
-   [Terminal](#terminal-ghostty--tmux-or-rex)). New terminals use Homebrew's
+   then import the Gruvbox Dark theme; cradle has already written its keys
+   and other Settings (see [Terminal](#terminal-ghostty--tmux-or-rex)).
+   New terminals use Homebrew's
    bash; Caps Lock is already Control.
 3. **Sign in to Claude Code:** `claude auth login`, with the claude.ai account
    that has the connectors. The first time you start `claude` in a folder,
@@ -224,9 +225,9 @@ bottom-left corner:
 - Caps Lock is Control, on every keyboard, through a LaunchAgent that runs
   `hidutil` at login. tmux's prefix (`C-Space`), Neovim's split movement and
   completion, fzf and readline all use Control.
-- On Ghostty + tmux machines, macOS's own `⌃Space` shortcut (select the
-  previous input source) is turned off so it can't take tmux's prefix
-  (`run_onchange_after_40-macos-shortcuts.sh.tmpl`).
+- macOS's own `⌃Space` shortcut (select the previous input source) is turned
+  off so it can't take the prefix, tmux's or Rex's
+  (`run_onchange_after_40-macos-shortcuts.sh`).
 - Bash history prefix search is on `C-p`/`C-n` as well as Up/Down.
 - tmux splits side by side with `\` instead of `|`, which needs Shift.
 
@@ -260,20 +261,33 @@ only that one's files:
 - **`ghostty`** (the default): Ghostty draws the terminal and tmux keeps
   sessions alive. Ghostty's first window runs `tmux-pick`, which attaches to
   a session. Installs the Ghostty cask, tmux (`dot_config/mise/conf.d/tmux.toml`),
-  `tmux.conf`, Ghostty's config, `tmux-pick`, and turns off macOS's `⌃Space`.
+  `tmux.conf`, Ghostty's config and `tmux-pick`.
 - **`rex`**: [Rex](https://superlogical.com), from Ghostty's author, does
   both jobs in one app. None of the above is installed. Rex itself isn't
   either: there's no cask yet, so download the tester `.dmg` from the Rex
-  Beta Discord. cradle manages `~/.config/rex/init.lua`, which holds keys,
-  actions and hosts (none set yet: Rex's own keys get learned as they come).
-  Private Rex servers (`rex.host{...}`) go in `~/.config/rex/local.lua`,
-  which `init.lua` loads if it's there and cradle doesn't manage. After
-  editing either: `rex config check`, then `rex config reload` (Rex doesn't
-  watch the file). The rest is only in Rex's Settings, so set it by hand on
-  each Rex machine: Themes → Import Theme (Gruvbox Dark, from Ghostty's
-  palette), Terminal → Cursor style (block, no blink), Keyboard → Option key
-  as Alt, and under Developer (turn on Developer Mode) both automatic-update
-  switches off.
+  Beta Discord. Rex is set up to work like Ghostty + tmux:
+  - **Keys:** `~/.config/rex/init.lua` gives Rex `tmux.conf`'s keys on the
+    same `⌃Space` prefix (`c`, `n`/`p`, `1`-`9`, `Tab`, `\`, `-`, `hjkl`,
+    `⌃hjkl` to resize until Esc, `z`, `;`, `x`, `s`, `(`/`)`, `L`, `S`, `$`,
+    `d` to close the window with sessions left running, `[` copy mode with
+    vi keys, `]`, `r` to reload). Keep it in step with `tmux.conf`.
+    Private Rex servers (`rex.host{...}`) go in `~/.config/rex/local.lua`,
+    which `init.lua` loads if it's there and cradle doesn't manage. After
+    editing either: `rex config check`, then `rex config reload` (prefix
+    `r`; Rex doesn't watch the file). Outside Rex's own terminals the CLI is
+    at `~/Library/Application Support/com.superlogical.rex/RexServer/Versions/Current/Rex Server.app/Contents/MacOS/rex`.
+  - **Settings:** Rex keeps them in macOS defaults (`com.superlogical.rex`).
+    `run_onchange_after_41-rex-settings.sh.tmpl` writes the ones that differ
+    from Rex's defaults: dark appearance, padding Y 10, cursor style forced,
+    Developer Mode on and updates that only notify. Rex's defaults already
+    match the rest of Ghostty's config (font size 12, padding X 10, block
+    cursor without blinking, Option as Alt). Ghostty's 150×50 window size
+    has no Rex setting.
+  - **Theme, by hand once per machine:** Rex has no built-in Gruvbox, so
+    cradle installs Ghostty's own theme file at
+    `~/.config/rex/themes/Gruvbox Dark` (pinned in `.chezmoiexternal.toml`).
+    In Settings → Themes → Import Theme, press ⌘⇧G, paste that path, and
+    pick it as the Dark Mode theme.
 
 To switch a machine, run `chezmoi init` and give the other answer (or edit
 `terminal` in `~/.config/chezmoi/chezmoi.toml`), then `chezmoi apply`. The
@@ -290,7 +304,7 @@ with new builds almost daily (Mac `0.1.0-preview.25`, Linux server
 |---|---|---|
 | Sessions outlive the app | Yes, through tmux | Yes: a server keeps sessions running whether or not a client is attached |
 | Remote | SSH, with tmux on the far end if wanted | Its own client/server, not SSH: a Rex server on Linux or FreeBSD, reached over Tailscale (or Headscale) or a network listener. Callers are trusted by how they connect; sign-in with SSH keys is planned. No Windows server yet |
-| Scrollback and selection | Ghostty's, plus tmux's keyboard copy mode | Native, by mouse (about 64 MiB scrollback). No keyboard copy mode: it's the most-asked-for feature and accepted, but the team warns it's hard; testers script stand-ins in Lua |
+| Scrollback and selection | Ghostty's, plus tmux's keyboard copy mode | Native (about 64 MiB scrollback), by mouse or a vi-style keyboard copy mode (`v`, `⌃v`, `y`; added by 2026-11-20) |
 | Splits, tabs | tmux panes and windows (prefix `C-Space`) | Panes, tabs and floating windows on Command keys (`⌘D`, `⇧⌘D`, `⌘T`); any key can be rebound, including tmux-style prefix sequences. "Last pane" and tmux-style popups are accepted, not built |
 | Extras | Ghostty shell integration, themes | Per-pane activity in tabs (working, blocked, done), asks before closing busy panes, open a session on the web, an iPhone/iPad app paired by QR code, Ghostty/iTerm theme import |
 | Config | `dot_config/ghostty/config`, `dot_config/tmux/tmux.conf` | Lua `~/.config/rex/init.lua` holds keys, actions and hosts (`rex config check` / `reload`). Appearance and most other settings are only in the app's Settings; keeping them in a file was deferred, so chezmoi could manage only part of it |
@@ -299,8 +313,8 @@ with new builds almost daily (Mac `0.1.0-preview.25`, Linux server
 | License | Both open source | Closed source and unfree; free to use, with no telemetry, account or license checks |
 | Install | Brewfile cask, mise | Testers only: a Mac `.dmg`, iOS through TestFlight, Linux packages behind a Discord sign-in. More install options promised for the public release |
 
-A Rex machine has no tmux: `tmux-pick`, `tmux.conf` and the `C-Space`
-prefix go with it.
+A Rex machine has no tmux, `tmux-pick` or `tmux.conf`; `init.lua` keeps the
+`C-Space` prefix and its keys.
 
 ### What Rex needs before it's the default
 
@@ -314,15 +328,15 @@ yet. Status as of 2026-11-03.
 | 1 | Have a stable public release, with no open crash or input bugs in daily use | Daily tools here aren't betas; mise even waits a week before taking a new release | ❌ Tester previews only; the stable channel has no releases yet |
 | 2 | Install and update from this repo: a Homebrew cask, or a mise tool for the CLI | Every app is a Brewfile cask and every CLI tool is in mise | ❌ A `.dmg` for testers; "more installation options for public release" |
 | 3 | Update only when asked | Updates are run on purpose (Updating everything); Claude Code's own updater is off | ◐ Self-installs by default; turning that off is a Settings switch behind Developer Mode, not a file |
-| 4 | Keep every setting in files chezmoi can manage: look (theme, font, padding, cursor), Option as Alt, keys, hosts | Claude makes every change in this repo; nothing is set by hand | ◐ `init.lua` holds keys, actions and hosts; look and most other settings are only in the app's Settings. Keeping them in a file was deferred. Unconfirmed whether Settings are plain `defaults` keys a `run_onchange_` script could write |
+| 4 | Keep every setting in files chezmoi can manage: look (theme, font, padding, cursor), Option as Alt, keys, hosts | Claude makes every change in this repo; nothing is set by hand | ◐ `init.lua` holds keys, actions and hosts; Settings are plain `defaults` keys, written by a `run_onchange_` script (2026-11-20). Only importing a theme is still by hand |
 | 5 | Let Claude check a config change without touching live sessions | Changes are tested in a throwaway home and an isolated tmux server, never on the live one | ◐ `rex config check <file>` checks a draft; an isolated test server is unconfirmed |
 | 6 | Run Neovim fully: true colour, focus events (reload changed files), Option as Alt, Ctrl keys | Neovim is the editor; Option is Alt for word movement in bash and Neovim | ◐ Option-as-Alt setting exists (broken in floating panes); an open bug shifts true-colour values |
-| 7 | Copy text from output and scrollback without the mouse, in whatever way Rex chooses | Work is keyboard-driven (Neovim, arrow keys off) | ❌ Mouse only; accepted, with a warning that it's hard |
+| 7 | Copy text from output and scrollback without the mouse, in whatever way Rex chooses | Work is keyboard-driven (Neovim, arrow keys off) | ✅ A vi-style copy mode (2026-11-20) |
 | 8 | Keep sessions running after the window or app closes, and get back to them at launch | Work is left running between days | ✅ The server keeps sessions; a session picker and "new session on launch" exist |
 | 9 | Work over plain SSH to hosts without Rex | Work and personal hosts are reached with SSH keys, per identity | ✅ `rex terminfo setup` / `host install` handle `TERM` |
 | 10 | Copy from a remote program to the Mac clipboard | Copying from remote shells (OSC 52) | ✅ OSC 52 works; remote-Mac clipboard bugs are open |
 | 11 | If persistent remote sessions are wanted: sign in to a remote Rex server with SSH keys, on any host, and let programs there use the Mac's clipboard | Work can be any git host, reached with its own key; Tailscale can't be assumed there. Neovim keeps its own registers and reaches the Mac clipboard only through `"+` | ❌ Tailscale or no authentication; SSH-key sign-in planned. On a remote server `"+` (`pbcopy`) lands on that machine's clipboard, not this Mac's (open request); on Linux, Neovim would need its OSC 52 clipboard set up |
-| 12 | Set up Claude Code's Rex skill and hook inside this repo's Claude config | Claude Code runs in the terminal all day, from `~/.config/claude` (`CLAUDE_CONFIG_DIR`), managed by chezmoi | ◐ `rex skill setup` exists (`--agent`, `--dry-run`) but writes to the agent's settings itself and looks for `~/.claude`; it would need to be brought into the repo |
+| 12 | Set up Claude Code's Rex skill and hook inside this repo's Claude config | Claude Code runs in the terminal all day, from `~/.config/claude` (`CLAUDE_CONFIG_DIR`), managed by chezmoi | ✅ Rex sets them up itself at first launch, in `~/.config/claude`; both are now in the repo for Rex machines (2026-11-20) |
 | 13 | Need no account and send no telemetry | Nothing here phones home or needs a sign-in to run | ✅ No telemetry, account or licence checks |
 
 To recheck, ask Claude: it reads Rex's docs, changelog and feedback through
@@ -349,14 +363,14 @@ the `superlogical` MCP server.
 | `dot_config/nvim/` | Neovim: lazy.nvim, built-in LSP and completion (servers installed by mise), conform for formatting |
 | `dot_config/tmux/tmux.conf`, `dot_config/mise/conf.d/tmux.toml` | tmux (prefix `C-Space`; the built-in keys it relies on are listed at the top) and its install. Ghostty + tmux machines only |
 | `dot_config/ghostty/config` | Ghostty (Gruvbox dark). Its first window at launch runs `tmux-pick`. Ghostty + tmux machines only |
-| `dot_config/rex/init.lua` | Rex's keys, actions and hosts; loads the unmanaged `local.lua` beside it. Rex machines only |
+| `dot_config/rex/init.lua` | Rex's keys (`tmux.conf`'s, on the same `C-Space` prefix), actions and hosts; loads the unmanaged `local.lua` beside it. Rex machines only, with the Gruvbox Dark theme file from `.chezmoiexternal.toml` |
 | `dot_local/bin/executable_vault-sync.tmpl`, `private_Library/LaunchAgents/local.vault-sync.plist.tmpl` | Backs up each Obsidian vault to its private git repo (see Obsidian); installed only when a vault repo is set. The LaunchAgent only without a work vault; with one, the journal's evening run starts the backup |
 | `dot_local/bin/executable_agentdb-mcp`, `dot_local/bin/executable_is-work.tmpl` | `~/.local/bin/agentdb-mcp`: starts agentdb's MCP server on the work or personal database (see Claude Code). `~/.local/bin/is-work [folder]`: exits 0 when a folder is work (git's identity there, or inside a work folder); agentdb, the journal and Claude's choice of vault all use it |
 | `dot_local/bin/executable_tmux-pick` | Ghostty + tmux machines only. `~/.local/bin/tmux-pick`: lists tmux sessions, most recent first, to attach to or start a new one; starts one straight away if there are none. Esc or leaving tmux drops to a plain shell |
 | `dot_config/claude/`, `.chezmoitemplates/claude-settings.json` | Claude Code (see below) |
-| `.chezmoiexternal.toml` | Files downloaded from other repos, pinned to a commit (Claude Code skills) |
+| `.chezmoiexternal.toml` | Files downloaded from other repos, pinned to a commit (Claude Code skills, Rex's Gruvbox Dark theme) |
 | `private_Library/LaunchAgents/` | At login: starts Colima (Docker), loads SSH keys from the keychain into ssh-agent (git signs commits through it) and makes Caps Lock a Control key. Every evening at 18:00: the Obsidian journal, then the vault backups |
-| `run_onchange_*` | Re-run `brew bundle`, `mise install` and completion generation when their inputs change, reload the LaunchAgents, register Claude Code's MCP servers, and turn off macOS's `⌃Space` shortcut (Ghostty + tmux machines) |
+| `run_onchange_*` | Re-run `brew bundle`, `mise install` and completion generation when their inputs change, reload the LaunchAgents, register Claude Code's MCP servers, turn off macOS's `⌃Space` shortcut, and write Rex's Settings (Rex machines) |
 
 ## Claude Code
 
@@ -372,6 +386,7 @@ it runs `claude`: in a shell, through its shims (the evening journal) or with
 | Settings (theme, env, plugins, marketplaces, permissions, hooks) | Add keys to `.chezmoitemplates/claude-settings.json` (it already makes `chezmoi apply` and `update` always ask first). `modify_settings.json` merges them into the live file, so these values win, and anything Claude Code writes itself (`/model`, `/config`) is kept. Deleting a key here doesn't remove it from the live file; remove it there too. `false`, empty and `0` values can't override a live value either. |
 | Plugins | Add `"name@marketplace": true` under `enabledPlugins`. Claude Code installs them at the next session start. |
 | Global instructions, rules, agents, commands | Plain files under `dot_config/claude/`. `CLAUDE.md` there says this Mac is managed from this repo; add rules as `dot_config/claude/rules/*.md` and agents as `dot_config/claude/agents/<name>.md`. |
+| Rex (Rex machines) | Rex's `rex` skill (`dot_config/claude/skills/rex/`, the stub `rex skill setup` writes; it reads its guide from the installed `rex`) and its SessionStart hook (`modify_settings.json`), which tells Rex which session Claude runs in. Rex adds both itself at first launch; they're in the repo so applying doesn't remove them. |
 | Agent: cradle-maintainer | `dot_config/claude/agents/cradle-maintainer.md`, the expert on this repo. Every session hands it setup changes and questions, from any folder. It reads this README and CLAUDE.md before each task rather than repeating them, so it can't drift from them. It edits, updates the docs and runs `scripts/check`, then stops and returns a summary of `chezmoi diff`; the session runs `chezmoi apply` (your OK) and messages it back to check the result, commit and push. Opus. |
 | Skills from GitHub | Add an entry to `.chezmoiexternal.toml`, pinned to a commit, with a link to the skill's history so updates can be checked by hand. Your own skills go in `dot_config/claude/skills/<name>/SKILL.md`. |
 | MCP servers (user scope) | Claude Code stores these in its own state file, so they're registered by `run_onchange_after_45-claude-mcp.sh.tmpl`: add an `add <name> '<json>'` line there and the server's tool to mise. It replaces a server of the same name; removing a line doesn't unregister it (`claude mcp remove --scope user <name>`). |

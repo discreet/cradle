@@ -45,9 +45,21 @@
 {{-   end -}}
 {{-   $_ := set $managed.permissions "allow" (append $allow "Bash(vault-sync)" | uniq) -}}
 {{- end -}}
+{{- $hooks := dict -}}
 {{- if .workVault -}}
 {{-   $check := dict "type" "command" "command" (joinPath .chezmoi.homeDir ".local/bin/journal-check") -}}
 {{-   $on := list (dict "hooks" (list $check)) -}}
-{{-   $_ := set $managed "hooks" (dict "SessionStart" $on "UserPromptSubmit" $on) -}}
+{{-   $hooks = dict "SessionStart" $on "UserPromptSubmit" $on -}}
+{{- end -}}
+{{- /*
+  Rex machines: Rex's own hook, as `rex skill setup` writes it, so Rex can
+  tell which session Claude runs in. rex is on PATH only in Rex's terminals.
+*/ -}}
+{{- if eq .terminal "rex" -}}
+{{-   $rex := dict "type" "command" "command" "/bin/sh -c 'rex __internal session-start --agent claude 2>/dev/null || true'" "timeout" 5 -}}
+{{-   $_ := set $hooks "SessionStart" (append (get $hooks "SessionStart" | default list) (dict "hooks" (list $rex))) -}}
+{{- end -}}
+{{- if $hooks -}}
+{{-   $_ := set $managed "hooks" $hooks -}}
 {{- end -}}
 {{- mergeOverwrite $live $managed | toPrettyJson "  " }}

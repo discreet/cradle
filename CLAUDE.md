@@ -140,19 +140,24 @@ are listed so they aren't proposed again without a reason.
   `ghostty` (Ghostty + tmux, the default) or `rex` (Superlogical's terminal
   and multiplexer). Each machine gets only its terminal's files: Ghostty's
   cask and config, tmux (`mise/conf.d/tmux.toml`), `tmux.conf`, `tmux-pick`
-  and the `⌃Space` script, or Rex's `~/.config/rex/init.lua`. Rex has no
-  cask, so it's installed by hand from the tester `.dmg`; `init.lua` holds
-  only keys, actions and hosts (no bindings yet; private hosts go in the
-  unmanaged `local.lua` it loads), and its look, Option key and updates are
-  set by hand in Rex's Settings (README's Terminal section lists them).
+  or Rex's `~/.config/rex/init.lua`, its Gruvbox Dark theme file and its
+  Settings script. The `⌃Space` script runs on both, since both use that
+  prefix. Rex has no cask, so it's installed by hand from the tester
+  `.dmg`. On a Rex machine Rex replaces Ghostty + tmux and is set up as
+  close to them as it allows (the user's call, 2026-11-20): `init.lua`
+  gives it `tmux.conf`'s keys on the same `C-Space` prefix, so a change to
+  `tmux.conf`'s keys goes into `init.lua` too; private hosts go in the
+  unmanaged `local.lua` it loads. Rex's Settings are macOS defaults
+  (`com.superlogical.rex`), and `run_onchange_after_41-rex-settings.sh.tmpl`
+  writes only those that differ from Rex's defaults; importing the theme
+  is the one step by hand.
   Ghostty + tmux stays the default because Rex is only an invite-only beta
   (checked 2026-11-03 with its docs, changelog and beta feedback: still
   testers only, no cask, no keyboard copy mode, most settings outside its
   config file). Make `rex` the default when every row of README's "What Rex
   needs before it's the default" is met; recheck it when asked. That list is
-  about this setup's needs, not tmux/Ghostty habits: with Rex the user will
-  learn its own ways, so don't add rows for recreating tmux keys or
-  workflows, and don't add tmux-like bindings to `init.lua` unprompted.
+  about this setup's needs, not tmux/Ghostty habits, so don't add rows for
+  recreating tmux keys or workflows.
 - **Ghostty:** built-in `Gruvbox Dark`, block cursor everywhere, both Option
   keys as Alt, SSH terminfo helper off. The first window runs `tmux-pick`.
   Claude reads up on Rex through Superlogical's hosted community MCP server

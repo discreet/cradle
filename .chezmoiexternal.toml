@@ -7,3 +7,12 @@
 [".config/claude/skills/find-skills/SKILL.md"]
   type = "file"
   url = "https://raw.githubusercontent.com/vercel-labs/skills/773fb2c7bbf16781670a3520affc4abd0c6151ae/skills/find-skills/SKILL.md"
+
+# Gruvbox Dark for Rex, which has no built-in Gruvbox: Ghostty's own theme
+# file (Ghostty's themes come from this repo), imported once by hand in Rex's
+# Settings → Themes → Import Theme. Rex machines only (.chezmoiignore).
+# Changes since this commit:
+# https://github.com/mbadolato/iTerm2-Color-Schemes/commits/master/ghostty/Gruvbox%20Dark
+[".config/rex/themes/Gruvbox Dark"]
+  type = "file"
+  url = "https://raw.githubusercontent.com/mbadolato/iTerm2-Color-Schemes/b4500fc87ea20546f53274df5b6062f557051000/ghostty/Gruvbox%20Dark"

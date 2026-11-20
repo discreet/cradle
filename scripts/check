@@ -109,13 +109,16 @@ terminal_files() { # Ghostty + tmux, or Rex: only that terminal's files, apps an
     [[ ! -e $home3/$f ]] || { echo "installed with Rex: $f"; bad=1; }
   done
   [[ ! -e $home/.config/rex ]] || { echo "Rex config with Ghostty"; bad=1; }
+  [[ ! -e $home/.config/claude/skills/rex ]] || { echo "Rex skill with Ghostty"; bad=1; }
+  ! grep -q 'rex __internal' "$home/.config/claude/settings.json" || { echo "Rex hook with Ghostty"; bad=1; }
+  [[ -f $home3/.config/claude/skills/rex/SKILL.md ]] || { echo "no Rex skill with Rex"; bad=1; }
   [[ -f $home3/.config/rex/init.lua ]] || { echo "no Rex config with Rex"; bad=1; }
   brew=$(cz execute-template <"$repo/Brewfile.tmpl")
   grep -qx 'cask "ghostty"' <<<"$brew" || { echo "Brewfile lacks Ghostty"; bad=1; }
   ! czh home-selfhosted execute-template <"$repo/Brewfile.tmpl" | grep -q ghostty || { echo "Brewfile has Ghostty with Rex"; bad=1; }
-  [[ -n $(cz execute-template <"$repo/run_onchange_after_40-macos-shortcuts.sh.tmpl") ]] || { echo "no Control-Space script with Ghostty"; bad=1; }
-  [[ -z $(czh home-selfhosted execute-template <"$repo/run_onchange_after_40-macos-shortcuts.sh.tmpl" | tr -d '[:space:]') ]] ||
-    { echo "Control-Space script runs with Rex"; bad=1; }
+  [[ -z $(cz execute-template <"$repo/run_onchange_after_41-rex-settings.sh.tmpl" | tr -d '[:space:]') ]] ||
+    { echo "Rex settings script runs with Ghostty"; bad=1; }
+  [[ -n $(czh home-selfhosted execute-template <"$repo/run_onchange_after_41-rex-settings.sh.tmpl") ]] || { echo "no Rex settings script with Rex"; bad=1; }
   return "$bad"
 }
 identity() { # identity <home> <remote url> <email> <signing key> [rewritten url]
@@ -198,8 +201,12 @@ no_obsidian() {
     [[ ! -e $h/$f ]] || { echo "installed without a vault: $f"; bad=1; }
   done
   ! grep -q Obsidian "$h/.config/claude/CLAUDE.md" || { echo "CLAUDE.md mentions Obsidian"; bad=1; }
-  jq -e '.permissions.additionalDirectories == null and .hooks == null' \
-    "$h/.config/claude/settings.json" >/dev/null || { echo "settings add a vault or hooks"; bad=1; }
+  jq -e '.permissions.additionalDirectories == null and .hooks.UserPromptSubmit == null
+    and ([.. | .command? // empty | select(test("journal-check"))] == [])' \
+    "$h/.config/claude/settings.json" >/dev/null || { echo "settings add a vault or journal hooks"; bad=1; }
+  # This test machine uses Rex, so only Rex's own hook starts sessions.
+  jq -e '[.hooks.SessionStart[].hooks[].command] == ["/bin/sh -c '"'"'rex __internal session-start --agent claude 2>/dev/null || true'"'"'"]' \
+    "$h/.config/claude/settings.json" >/dev/null || { echo "no Rex hook with Rex"; bad=1; }
   return "$bad"
 }
 is_work() { # git identity or work folder; anything else, or no work identity, is personal
@@ -563,8 +570,12 @@ else
   skip "Neovim (not installed)"
 fi
 
-if have rex; then
-  check "Rex checks its config" rex config check "$home3/.config/rex/init.lua"
+# Rex's CLI is on PATH only inside Rex's own terminals; outside them, use the
+# copy the app installed.
+rex_bin=$(command -v rex || true)
+[[ -n $rex_bin ]] || rex_bin="$HOME/Library/Application Support/com.superlogical.rex/RexServer/Versions/Current/Rex Server.app/Contents/MacOS/rex"
+if [[ -x $rex_bin ]]; then
+  check "Rex checks its config" "$rex_bin" config check "$home3/.config/rex/init.lua"
 else
   skip "Rex (not installed)"
 fi
