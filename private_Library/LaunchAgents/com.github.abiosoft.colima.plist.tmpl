@@ -17,6 +17,9 @@
     <string>colima</string>
     <string>start</string>
     <string>--foreground</string>
+    <!-- Colima would otherwise add an Include to ~/.ssh/config, which cradle
+         manages; `colima ssh` works without it. -->
+    <string>--ssh-config=false</string>
   </array>
   <key>EnvironmentVariables</key>
   <dict>

@@ -206,7 +206,9 @@ The commands behind what Claude does, for reference:
 | Refresh GitHub's SSH host keys | only if GitHub rotates them (ssh then refuses to connect): regenerate `private_dot_ssh/known_hosts.github` from the `ssh_keys` list at https://api.github.com/meta |
 
 Docker runs in a [Colima](https://github.com/abiosoft/colima) VM that a
-LaunchAgent starts at login (log: `~/Library/Logs/colima.log`). `colima stop`
+LaunchAgent starts at login (log: `~/Library/Logs/colima.log`), with
+`--ssh-config=false` so it leaves `~/.ssh/config` alone (`colima ssh` still
+works). `colima stop`
 frees its memory until the next login or `colima start`.
 
 Settings for a single machine go in `~/.bashrc.local` and
