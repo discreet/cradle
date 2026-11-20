@@ -257,15 +257,17 @@ is_work() { # git identity or work folder; anything else, or no work identity, i
   ! "$home2/.local/bin/is-work" "$tmp/work/notes" || { echo "work without a work identity"; bad=1; }
   return "$bad"
 }
-obsidian_apply() { # merges into existing settings, writes the template; nothing without a vault
+obsidian_apply() { # merges into existing settings, writes the templates; nothing without a vault
   mkdir -p "$vault/.obsidian"
   echo '{"autorun":true,"folder":"Old"}' >"$vault/.obsidian/daily-notes.json"
   cz execute-template <"$repo/run_onchange_after_35-obsidian.sh.tmpl" | bash >/dev/null || return 1
   jq -e '. == {"autorun":true,"folder":"Daily","format":"YYYY-MM-DD","template":"Templates/Daily"}' \
     "$vault/.obsidian/daily-notes.json" >/dev/null || { cat "$vault/.obsidian/daily-notes.json"; return 1; }
   jq -e '.folder == "Templates"' "$vault/.obsidian/templates.json" >/dev/null || return 1
-  cmp "$repo/obsidian/Templates/Daily.md" "$vault/Templates/Daily.md" || return 1
-  cmp "$repo/obsidian/Templates/Meeting.md" "$vault/Templates/Meeting.md" || return 1
+  local t
+  for t in "$repo"/obsidian/Templates/*.md; do
+    cmp "$t" "$vault/Templates/${t##*/}" || return 1
+  done
   [[ -d $vault/Daily ]] || { echo "no Daily folder"; return 1; }
   [[ -z $(czh home-personal execute-template <"$repo/run_onchange_after_35-obsidian.sh.tmpl" | tr -d '[:space:]') ]] ||
     { echo "the script isn't empty without a vault"; return 1; }

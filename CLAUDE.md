@@ -225,43 +225,6 @@ are listed so they aren't proposed again without a reason.
   `~/Documents/cradle`. `workFolders` is `~/Documents/work`. Flat `code/`,
   grouping by product and a single shared vault were not chosen. README's
   Folders section is the reference.
-- **Obsidian:** two vaults, work and personal (chosen over one shared
-  vault). Claude uses both as plain files (extra working folders), not
-  through an MCP server or plugin, and its instructions say to use the one
-  matching the session (`is-work`, the same rule as agentdb) and reach into
-  the other only when asked. Each machine is asked for a work vault (only
-  with a work identity) and a personal vault, each with folders Claude must
-  not read (denied to its file tools, forbidden otherwise by the global
-  instructions). The personal vault is unstructured and ad hoc: cradle writes
-  nothing to it, no daily notes, templates or journal. Obsidian doesn't sync
-  between machines; each vault is backed up to its own private git repo
-  (personal on GitHub, work on the work host) by `vault-sync` (chosen over
-  Obsidian Sync, iCloud Drive and Time Machine): every evening at 18:00 once
-  the journal has written the day's note (its run starts `vault-sync`; a
-  machine without a work vault has its own 18:00 agent), and again after
-  the journal skill fills in the Slack and Meetings summaries in the next
-  interactive session (allowed without asking). Everything below is
-  the work vault only. The `journal` skill
-  summarises the day's work Claude Code sessions and git commits (personal
-  ones are left out) into a
-  `## Terminal` section of the daily note, run by a LaunchAgent every evening
-  at 18:00. Meetings (Google Calendar, plus decisions and action items from
-  attached meeting notes) and Slack conversations go in `## Meetings` and
-  `## Slack` via the claude.ai connectors; headless `claude -p` doesn't load
-  connectors (tested, 2.1.314), so a hook (`journal-check`, on SessionStart
-  and UserPromptSubmit, once a day) has the next interactive session catch
-  up whichever is missing, saying so in one line without asking, then back
-  up the vaults (chosen over offering first, on-demand only and local MCP
-  servers with tokens). The user takes
-  their own meeting notes in `## Meetings` under `### HH:MM` headings, from
-  `/journal agenda` (run by the same hook each weekday without asking, including in a
-  session left open overnight) or `Templates/Meeting.md`; the
-  journal matches them to events by time and never edits the user's text
-  (chosen over AI note-takers, attached notes docs and one note per
-  meeting). Section markers `%% agenda %%`/`%% journal %%` record progress. Daily notes are managed from `obsidian/`: `Daily/YYYY-MM-DD.md`,
-  from `Templates/Daily.md`, which the repo overwrites (the user chose a
-  managed template over a create-once one). Shell history was left out on purpose; per-session summaries and
-  an on-demand-only journal were declined.
 - **Google Workspace:** through claude.ai connectors only (Calendar for the
   journal; Drive, Docs and Sheets for searching and editing), connected in
   the claude.ai account, so nothing for it lives in this repo beyond the

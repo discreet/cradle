@@ -356,7 +356,6 @@ the `superlogical` MCP server.
 |---|---|
 | `Brewfile.tmpl` | Homebrew formulae and apps; a template, so Ghostty is left out on Rex machines |
 | `CLAUDE.md`, `.claude/settings.json` | How Claude Code maintains this repo, and which commands it may run here without asking. Not copied to `~` |
-| `obsidian/` | Obsidian's Daily notes and Templates settings and the daily note template, applied to the work vault by `run_onchange_after_35-obsidian.sh.tmpl`. Not copied to `~` |
 | `dot_config/claude/skills/journal/`, `dot_local/bin/executable_journal-data`, `dot_local/bin/executable_obsidian-journal`, `dot_local/bin/executable_journal-check.tmpl`, `private_Library/LaunchAgents/local.obsidian-journal.plist.tmpl` | The work vault's journal (see Obsidian); installed only when a work vault is set |
 | `.githooks/commit-msg` | Rejects commit messages that aren't Conventional Commits. `bootstrap.sh` turns it on with `git config core.hooksPath .githooks` |
 | `scripts/check` | Renders every file into a throwaway home folder and checks it with the program that reads it (shellcheck, tmux, git, ssh, plutil, jq, Neovim, Ghostty, Homebrew). Run before every apply |
@@ -460,17 +459,6 @@ or MCP server:
   notification; resolve it with git in the vault. The journal leaves the
   vaults' backup commits out.
 - **The work vault** is structured and automated, as below.
-- Daily notes are configured from `obsidian/` in this repo: they live in
-  `Daily/` as `YYYY-MM-DD.md` and start from `Templates/Daily.md` (a `date`
-  property and `## Notes`, `## Meetings`, `## Terminal`, `## Slack`).
-  `Templates/Meeting.md` starts a meeting's notes: `### HH:MM` with the
-  current time. Give "Templates: Insert template" a hotkey in Obsidian
-  (Settings → Hotkeys), then it's the hotkey, "Mee", Enter. A `run_onchange` script merges the
-  settings into the work vault's `.obsidian/` files, keeping anything else set in
-  Obsidian, and writes the template; edit them here, not in Obsidian, since
-  the next apply overwrites the template. If the vault hasn't been opened in
-  Obsidian yet, it waits, and the first apply after opening it writes them.
-  Obsidian picks up the settings when it next opens the vault.
 - **Meeting notes during the day:** `/journal agenda` (or "add today's
   meetings") puts today's Google Calendar events into `## Meetings` as
   `### 10:00 Title (with who)` headings; type your notes under them, or start
