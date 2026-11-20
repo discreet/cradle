@@ -6,9 +6,6 @@
 # urgent: MISE_MINIMUM_RELEASE_AGE=0 mise upgrade <tool>. (mise already
 # checks GitHub's checksum, attestations and SLSA provenance by default.)
 minimum_release_age = "7d"
-# agentdb's whole 3.x line is newer than a week; the delay would fall back to
-# 1.6.1. Drop this once 3.x is older than the delay.
-minimum_release_age_excludes = ["npm:agentdb"]
 
 [env]
 # Go's module cache and build cache live here instead of ~/go. Set in mise so
@@ -74,4 +71,7 @@ terraform = "latest"
 
 # AI
 claude-code = "latest"
-"npm:agentdb" = "latest" # vector memory, Claude Code's MCP server (run_onchange_after_45-claude-mcp)
+# vector memory, Claude Code's MCP server (run_onchange_after_45-claude-mcp).
+# Pinned: 3.10.1 dropped npm provenance, which mise refuses as a trust
+# downgrade. Back to "latest" once a newer release has provenance again.
+"npm:agentdb" = "3.10.0"
