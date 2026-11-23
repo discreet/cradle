@@ -259,6 +259,13 @@ is_work() { # git identity or work folder; anything else, or no work identity, i
   ! "$home/.local/bin/is-work" "$w/mine" || { echo "personal repo is work"; bad=1; }
   ! "$home/.local/bin/is-work" "$w" || { echo "plain folder is work"; bad=1; }
   ! "$home2/.local/bin/is-work" "$tmp/work/notes" || { echo "work without a work identity"; bad=1; }
+  # A work folder it can't enter (no Full Disk Access) is "can't tell", said out loud.
+  local out st
+  mkdir -p "$tmp/clients b" && chmod 000 "$tmp/clients b"
+  out=$("$home/.local/bin/is-work" "$w" 2>&1); st=$?
+  chmod 755 "$tmp/clients b"
+  [[ $st == 2 && $out == *"no access to $tmp/clients b"*"Full Disk Access"* ]] ||
+    { echo "unreadable work folder: exit $st, $out"; bad=1; }
   return "$bad"
 }
 obsidian_apply() { # merges into existing settings, writes the templates; nothing without a vault
@@ -320,6 +327,18 @@ journal_check() { # catches up the last weekday's missing summaries and adds tod
     { echo "no offer on a prompt: $out"; return 1; }
   [[ -z $(echo '{"hook_event_name":"UserPromptSubmit"}' | XDG_STATE_HOME=$st "$hook") ]] ||
     { echo "asked again on the next prompt"; return 1; }
+  # The evening run had no access: tell the user once a day, and write that day's summary.
+  rm -rf "$st"; mkdir -p "$st/cradle/journal"
+  printf '## Meetings\n%%%% journal %%%%\n## Terminal\n\n## Slack\n- Nothing.\n' >"$old"
+  echo "$day /opt/homebrew/Cellar/bash/9/bin/bash" >"$st/cradle/journal/no-access"
+  touch "$st/cradle/journal/agenda-checked-$today"
+  says "grant Full Disk Access to /opt/homebrew/Cellar/bash/9/bin/bash" "write the summary for $day" || return 1
+  mkdir -p "$st/cradle/journal"
+  echo "$day /opt/homebrew/Cellar/bash/9/bin/bash" >"$st/cradle/journal/no-access"
+  touch "$st/cradle/journal/agenda-checked-$today" "$st/cradle/journal/checked-$day"
+  run /somewhere >/dev/null
+  [[ -z $(run /somewhere) ]] || { echo "told twice in a day"; return 1; }
+  rm -rf "$st"
 }
 journal_data() { # today's work sessions and commits only, without the evening run's own
   local j=$tmp/journal today now yesterday out
@@ -402,16 +421,16 @@ vault_sync() { # clone, first backup, rebase onto another machine, conflicts, em
   { run && [[ $(cat "$pvault/note.md") == two ]]; } || { echo "empty folder not filled"; return 1; }
 }
 evening_run() { # the journal (only when there's work to journal), then the backup
-  local e=$tmp/evening log=$tmp/evening/order
+  local e=$tmp/evening log=$tmp/evening/order out
   mkdir -p "$e/.local/bin" "$e/.local/share/mise/shims"
   [[ ! -e $home/Library/LaunchAgents/local.vault-sync.plist ]] ||
     { echo "its own vault-sync agent beside the journal's"; return 1; }
   # The stubs expand $2 and $WORK when they run, not here.
   # shellcheck disable=SC2016
-  printf '#!/bin/sh\necho claude "$2" >>"%s"\n' "$log" >"$e/.local/share/mise/shims/claude"
+  printf '#!/bin/sh\necho claude "$@" >>"%s"\n' "$log" >"$e/.local/share/mise/shims/claude"
   printf '#!/bin/sh\necho vault-sync >>"%s"\n' "$log" >"$e/.local/bin/vault-sync"
   # shellcheck disable=SC2016
-  printf '#!/bin/sh\n[ -n "$WORK" ] && echo "## ~/code"\nexit 0\n' >"$e/.local/bin/journal-data"
+  printf '#!/bin/sh\n[ -n "$NOACCESS" ] && exit 2\n[ -n "$WORK" ] && echo "## ~/code"\nexit 0\n' >"$e/.local/bin/journal-data"
   chmod +x "$e"/.local/bin/* "$e/.local/share/mise/shims/claude"
   HOME=$e XDG_STATE_HOME=$e/state "$home/.local/bin/obsidian-journal" >/dev/null || return 1
   [[ $(cat "$log") == vault-sync ]] || { echo "quiet day:"; cat "$log"; return 1; }
@@ -419,6 +438,21 @@ evening_run() { # the journal (only when there's work to journal), then the back
   HOME=$e XDG_STATE_HOME=$e/state WORK=1 "$home/.local/bin/obsidian-journal" >/dev/null || return 1
   [[ $(head -1 "$log") == claude*"Don't run vault-sync"* && $(sed -n 2p "$log") == vault-sync ]] ||
     { echo "work day:"; cat "$log"; return 1; }
+  # Read-only connector tools only: Slack under both names, Calendar, Drive and Docs.
+  local t
+  for t in mcp__claude_ai_Slack__slack_search_public_and_private mcp__plugin_slack_slack__slack_read_thread \
+    mcp__claude_ai_Google_Calendar__list_events mcp__claude_ai_Google_Docs__read_doc; do
+    grep -qF -- "$t" "$log" || { echo "evening run lacks $t"; return 1; }
+  done
+  ! grep -qE 'create_|update_|delete_|respond_|send_' "$log" || { echo "evening run may write:"; cat "$log"; return 1; }
+  # No access to ~/Documents: says so, leaves a marker, still backs up; a good run clears it.
+  rm "$log"
+  out=$(HOME=$e XDG_STATE_HOME=$e/state NOACCESS=1 "$home/.local/bin/obsidian-journal") || return 1
+  [[ $out == *"grant Full Disk Access to "* && $out != *"Nothing happened"* ]] || { echo "no access: $out"; return 1; }
+  [[ $(cat "$log") == vault-sync ]] || { echo "no access:"; cat "$log"; return 1; }
+  [[ $(cut -d' ' -f1 "$e/state/cradle/journal/no-access") == "$(date +%F)" ]] || { echo "no marker"; return 1; }
+  HOME=$e XDG_STATE_HOME=$e/state "$home/.local/bin/obsidian-journal" >/dev/null || return 1
+  [[ ! -e $e/state/cradle/journal/no-access ]] || { echo "marker kept after a good run"; return 1; }
 }
 ssh_host() { # ssh_host <ssh config> <alias> <expected hostname>
   local got

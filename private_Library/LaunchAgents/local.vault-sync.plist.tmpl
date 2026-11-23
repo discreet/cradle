@@ -6,6 +6,8 @@
   only with a vault repo and no work vault: with a work vault, the journal's
   18:00 run (obsidian-journal) runs vault-sync once it has written the note.
   Loaded by run_onchange_after_30-launch-agents.sh.
+  Run with Homebrew's bash, the program that needs Full Disk Access to read
+  ~/Documents (README: After bootstrap).
 -->
 <plist version="1.0">
 <dict>
@@ -13,6 +15,7 @@
   <string>local.vault-sync</string>
   <key>ProgramArguments</key>
   <array>
+    <string>/opt/homebrew/bin/bash</string>
     <string>{{ .chezmoi.homeDir }}/.local/bin/vault-sync</string>
   </array>
   <key>StartCalendarInterval</key>

@@ -77,7 +77,10 @@ or remove their text. It looks like this:
 4. **Meetings**, only if Google Calendar tools are available; otherwise leave
    the Meetings section exactly as it is and say so. List the day's events
    (see "Which events"). If an event has meeting notes attached (a Google
-   Doc) and Google Drive tools are available, read them too.
+   Doc) and Google Drive or Docs tools are available, read them too
+   (Drive's `read_file_content` or Docs' `read_doc`). In the evening run
+   only read tools are allowed; a source whose call is refused is one you
+   couldn't reach (step 6).
 5. If there are no meetings, sessions, commits or Slack messages, say so and
    stop.
 6. **Write the sections.** Keep each short enough to skim in a minute, and use

@@ -4,8 +4,11 @@
 # morning's too. Once each, Claude says in one line what it's doing and does
 # it without asking:
 # - catches up the last weekday's Meetings or Slack summary, if missing (then
-#   backs up the vaults). Those come from claude.ai connectors (Google
-#   Calendar, Slack), which headless runs like the evening journal can't use;
+#   backs up the vaults). The evening run writes them too, but a connector
+#   can be unreachable there;
+# - when the evening run had no access to ~/Documents (its no-access marker),
+#   tells the user to grant Full Disk Access and writes that day's whole
+#   summary, once a day until a run succeeds;
 # - on a weekday, adds today's meetings to today's daily note (as headings to
 #   take notes under), if they aren't there yet.
 # Each day is checked once, so later prompts return after two file tests. The
@@ -21,7 +24,9 @@ back=1 # to the last weekday: Monday -> Friday, Sunday -> Friday
 day=$(date -v-${back}d +%F)
 agenda=""
 ((weekday <= 5)) && [[ ! -e $state/agenda-checked-$today ]] && agenda=1
-[[ -n $agenda || ! -e $state/checked-$day ]] || exit 0
+noaccess=""
+[[ -e $state/no-access && ! -e $state/no-access-told-$today ]] && noaccess=1
+[[ -n $agenda || -n $noaccess || ! -e $state/checked-$day ]] || exit 0
 
 IFS=$'\t' read -r event cwd < <(jq -r '[.hook_event_name // "SessionStart", .cwd // ""] | @tsv')
 [[ $cwd != "$state" ]] || exit 0
@@ -42,6 +47,15 @@ if [[ -n $agenda ]]; then
   has "$(note "$today")" Meetings '%% (agenda|journal) %%' ||
     tasks+=("add today's meetings ($today) to the daily note as headings to take notes under, with the journal skill's agenda mode")
 fi
+if [[ -n $noaccess ]]; then
+  touch "$state/no-access-told-$today"
+  read -r failed bash <"$state/no-access" || true
+  tasks+=("tell the user that the evening journal run on $failed couldn't read ~/Documents, so it wrote nothing and backed nothing up, and that they need to grant Full Disk Access to $bash (System Settings > Privacy & Security > Full Disk Access; README, After bootstrap)")
+  if ! has "$(note "$failed")" Terminal '[^[:space:]]'; then
+    tasks+=("write the summary for $failed with the journal skill (all sections; the evening run couldn't)")
+    [[ $failed != "$day" ]] || touch "$state/checked-$day" # covers that day's catch-up too
+  fi
+fi
 if [[ ! -e $state/checked-$day ]]; then
   touch "$state/checked-$day"
   missing=()
@@ -49,7 +63,7 @@ if [[ ! -e $state/checked-$day ]]; then
   has "$(note "$day")" Slack '[^[:space:]]' || missing+=(Slack)
   if ((${#missing[@]})); then
     what=${missing[*]}
-    tasks+=("catch up the ${what/ / and } summary for $day with the journal skill (the evening run can't reach claude.ai connectors)")
+    tasks+=("catch up the ${what/ / and } summary for $day with the journal skill (the evening run couldn't write it)")
   fi
 fi
 

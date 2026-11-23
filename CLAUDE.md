@@ -102,7 +102,7 @@ and every tag.
 | A Homebrew formula | Nowhere, if mise can install it. Only `bash`, `bash-completion@2` and `mise` are formulae |
 | Shell settings, aliases, env | a file in `dot_config/bash/rc.d/` (loaded in name order) |
 | A macOS setting | a `run_onchange_` script using `defaults write`, ideally applied without logging out |
-| Something that runs at login | a plist in `private_Library/LaunchAgents/` named `<label>.plist`; `run_onchange_after_30-launch-agents.sh.tmpl` finds it and reloads only agents that changed |
+| Something that runs at login | a plist in `private_Library/LaunchAgents/` named `<label>.plist`; `run_onchange_after_30-launch-agents.sh.tmpl` finds it and reloads only agents that changed. If it reads `~/Documents`, run its script as `/opt/homebrew/bin/bash <script>` (the program with Full Disk Access) and make it say so when access is denied, not fail quietly |
 | A file that programs also write | a `modify_` template that merges managed keys over the live file, like `dot_config/claude/modify_settings.json` and `private_dot_docker/modify_private_config.json`. The merge can't set `false`, `""` or `0` over a live value; turn such a setting off another way (e.g. a `run_onchange_` script with `jq`) |
 | A value that differs per machine | `promptStringOnce` in `.chezmoi.toml.tmpl`, used as `{{ .name }}` in a `.tmpl` file |
 | A file from someone else's repo | `.chezmoiexternal.toml`, pinned to a commit, with a link to its history above the entry |
@@ -219,6 +219,22 @@ are listed so they aren't proposed again without a reason.
   what the repo no longer lists, e.g. `brew bundle cleanup` with
   confirmation, `mise prune`, a `.chezmoiremove`, and removing
   unregistered MCP servers. Until then, say what to uninstall by hand.
+- **Full Disk Access for the evening jobs** (chosen 2026-11-23): macOS
+  blocks LaunchAgents from `~/Documents`, which held the evening journal and
+  backups at "Nothing happened today" from 2026-11-20. The journal and
+  `vault-sync` agents run their scripts with Homebrew's bash
+  (`/opt/homebrew/bin/bash <script>`, not the `#!/usr/bin/env bash` line,
+  which under launchd is Apple's `/bin/bash`), and that bash's real path
+  (`realpath`) is granted Full Disk Access by hand, a step after bootstrap.
+  Trade-off accepted: every bash script a LaunchAgent starts with that bash
+  gets the access. Homebrew's bash is ad hoc signed, so each new bash build
+  needs the grant again. Without access, `is-work` exits 2 with a message,
+  `obsidian-journal` logs it and leaves a `no-access` marker,
+  `vault-sync` notifies, and `journal-check` tells the next session and
+  has it write the missed day. No automatic test from launchd's context
+  (that would need `launchctl`); `launchctl kickstart` of the agent is the
+  manual check. Moving the vaults and work folders out of `~/Documents` and
+  granting Apple's `/bin/bash` were not chosen.
 - **Folders:** `~/Documents/work/` and `~/Documents/personal/`, each with
   `code/<org>/<repo>`, its `Obsidian/` vault and other files in topic
   folders next to `code/` (not as vault attachments); `cradle` stays at
@@ -283,7 +299,10 @@ When the user asks to update, do these in order and report what changed:
    versions (chezmoi only reruns that script when mise's config changes):
    `chezmoi execute-template <"$(chezmoi source-path)/run_onchange_after_25-completions.sh.tmpl" | bash`.
    Nothing to commit unless a pin changes.
-2. **Homebrew:** `brew update && brew upgrade` (bash, mise, apps).
+2. **Homebrew:** `brew update && brew upgrade` (bash, mise, apps). If bash
+   was upgraded, tell the user to grant Full Disk Access to the new
+   `realpath /opt/homebrew/bin/bash` and remove the old entry (README,
+   After bootstrap); the evening jobs stop until they do.
 3. **Neovim plugins:** `nvim --headless "+Lazy! update" +qa`, then
    `chezmoi re-add ~/.config/nvim/lazy-lock.json`, `scripts/check`, commit
    and push.

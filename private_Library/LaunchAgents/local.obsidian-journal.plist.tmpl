@@ -5,6 +5,8 @@
   summarises the day into the Obsidian daily note; see obsidian-journal.
   Installed only when chezmoi was given a vault. Loaded by
   run_onchange_after_30-launch-agents.sh.
+  Run with Homebrew's bash, the program that needs Full Disk Access to read
+  ~/Documents (README: After bootstrap).
 -->
 <plist version="1.0">
 <dict>
@@ -12,6 +14,7 @@
   <string>local.obsidian-journal</string>
   <key>ProgramArguments</key>
   <array>
+    <string>/opt/homebrew/bin/bash</string>
     <string>{{ .chezmoi.homeDir }}/.local/bin/obsidian-journal</string>
   </array>
   <key>StartCalendarInterval</key>

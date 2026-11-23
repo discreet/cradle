@@ -130,16 +130,33 @@ versions in `lazy-lock.json`. It ends by listing the steps below.
    folder. Then run `chezmoi apply` once, so the work vault gets its Daily
    notes settings and templates. Optionally, give "Templates: Insert
    template" a hotkey (Settings → Hotkeys) to start meeting notes quickly.
-6. **Sign in to the cloud CLIs you use:** `gh auth login` (choose SSH as
+6. **Let the evening jobs read `~/Documents`** (with a vault): macOS
+   blocks LaunchAgents from `~/Documents` unless the program they run has
+   Full Disk Access. The journal and backup agents run Homebrew's bash, so
+   give it that access:
+   1. `realpath /opt/homebrew/bin/bash` prints the real program, e.g.
+      `/opt/homebrew/Cellar/bash/5.3.20/bin/bash`. Add that path, not the
+      `/opt/homebrew/bin/bash` link.
+   2. System Settings → Privacy & Security → Full Disk Access → `+`, press
+      ⌘⇧G, paste the path, Open, and make sure its switch is on.
+   Every bash script a LaunchAgent starts with that bash gets the access.
+   Homebrew's bash is signed per build, so after `brew upgrade` updates
+   bash, add the new path and remove the old one. Without it the evening run
+   writes nothing and backs nothing up; its log says so, and the next
+   Claude Code session tells you. To try it now:
+   `launchctl kickstart gui/$(id -u)/local.obsidian-journal` (or
+   `local.vault-sync` without a work vault) runs the evening job, then read
+   its log.
+7. **Sign in to the cloud CLIs you use:** `gh auth login` (choose SSH as
    the git protocol and skip uploading a key, so git keeps using cradle's
    keys; `gh auth login` again for a second account, `gh auth switch` to
    change), `gt auth --token <token>` (from Graphite's web app),
    `gcloud auth login` and `gcloud auth application-default login` (for
    Terraform and other tools using Google's libraries). Credentials stay on
    the machine.
-7. **Optional: Rex's community MCP server.** In Claude Code, `/mcp`, pick
+8. **Optional: Rex's community MCP server.** In Claude Code, `/mcp`, pick
    `superlogical` and sign in with Discord.
-8. **Check it all:** `chezmoi status` should print nothing, `mise ls` should
+9. **Check it all:** `chezmoi status` should print nothing, `mise ls` should
    show every tool installed, and `scripts/check` in `~/Documents/cradle`
    should pass.
 
@@ -377,7 +394,7 @@ the `superlogical` MCP server.
 | `dot_local/bin/executable_tmux-pick` | Ghostty + tmux machines only. `~/.local/bin/tmux-pick`: lists tmux sessions, most recent first, to attach to or start a new one; starts one straight away if there are none. Esc or leaving tmux drops to a plain shell |
 | `dot_config/claude/`, `.chezmoitemplates/claude-settings.json` | Claude Code (see below) |
 | `.chezmoiexternal.toml` | Files downloaded from other repos, pinned to a commit (Claude Code skills, Rex's Gruvbox Dark theme) |
-| `private_Library/LaunchAgents/` | At login: starts Colima (Docker), loads SSH keys from the keychain into ssh-agent (git signs commits through it) and makes Caps Lock a Control key. Every evening at 18:00: the Obsidian journal, then the vault backups |
+| `private_Library/LaunchAgents/` | The evening ones run their script with Homebrew's bash, which needs Full Disk Access to read `~/Documents` (see After bootstrap). At login: starts Colima (Docker), loads SSH keys from the keychain into ssh-agent (git signs commits through it) and makes Caps Lock a Control key. Every evening at 18:00: the Obsidian journal, then the vault backups |
 | `run_onchange_*` | Re-run `brew bundle`, `mise install` and completion generation when their inputs change, reload the LaunchAgents, register Claude Code's MCP servers, turn off macOS's `⌃Space` shortcut, and write Rex's Settings (Rex machines) |
 
 ## Claude Code
@@ -411,19 +428,24 @@ so a new machine gets them as soon as you sign in to Claude Code with that
 account; a missing connector only turns its feature off. Three things to
 know:
 
-- Claude Code loads them only in interactive sessions. Headless runs
-  (`claude -p`, like the evening journal) can't use them, which is why the
-  journal fills its connector sections in the next session you open.
+- Headless runs (`claude -p`, like the evening journal) load them too
+  (2.1.314 didn't; 2.1.323 does, checked 2026-11-23 from a terminal), but
+  can only use the tools they're allowed. The evening journal is allowed
+  read tools only: Slack's, Google Calendar's (list, get and search
+  events) and Drive's and Docs' for attached meeting notes. The next
+  session you open still fills in whatever it couldn't reach.
+- Some arrive under another name: Slack can come as the Slack plugin
+  (`mcp__plugin_slack_slack__*`) instead of the connector
+  (`mcp__claude_ai_Slack__*`), so what uses Slack accepts both.
 - What a connector may do (read only, or also write) is set when you connect
   it, and may be limited by a claude.ai organisation admin or by the service's
   own admin.
 
 | Connector | Access needed | What in cradle depends on it |
 |---|---|---|
-| Slack | read | The journal's `## Slack` section (conversations you were in, mentions, DMs). |
-| Google Calendar | read | The journal's `## Meetings` section and `/journal agenda` (today's meetings as headings to take notes under), and the start-of-session catch-up and agenda. |
+| Google Calendar | read | The journal's `## Meetings` section (the evening run and the start-of-session catch-up) and `/journal agenda` (today's meetings as headings to take notes under). |
 | Google Drive | read and write | Searching Drive from Claude, and meeting notes docs attached to calendar events, which the journal reads. Write access lets Claude create files. |
-| Google Docs | read and write | Creating and editing Docs from Claude. |
+| Google Docs | read and write | Creating and editing Docs from Claude, and reading meeting notes for the journal. |
 | Google Sheets | read and write | Creating and editing Sheets from Claude. |
 
 ## Obsidian
@@ -480,9 +502,14 @@ or MCP server:
 - A LaunchAgent runs it every evening at 18:00 (on waking, if the Mac was
   asleep), only if there were work sessions or commits that day, then runs
   `vault-sync` either way. Log:
-  `~/Library/Logs/obsidian-journal.log`. That run is headless, and headless
-  Claude Code doesn't load claude.ai connectors, so it can't reach Calendar
-  or Slack. Instead, a hook (`journal-check`, run when Claude starts and on
+  `~/Library/Logs/obsidian-journal.log`. That run is headless and is
+  allowed only read tools (Slack under either name, Google Calendar, and
+  Drive and Docs for attached notes; see
+  [claude.ai connectors](#claudeai-connectors)), so it writes every
+  section. It needs Full Disk Access for Homebrew's bash (Getting started,
+  After bootstrap); without it, the log says so instead of "Nothing
+  happened today", and the next session tells you and writes that day's
+  summary. For whatever else it couldn't write, a hook (`journal-check`, run when Claude starts and on
   each message, checking once a day) looks at the last weekday's note; if its Meetings section isn't
   summarised yet (marked `%% journal %%`, hidden in reading view) or its
   Slack section is empty, Claude says in one line that it's catching up and

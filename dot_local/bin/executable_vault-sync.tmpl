@@ -29,6 +29,11 @@ sync() { # sync <vault> <repo url>
   local vault=$1 url=$2
   [[ -n $vault && -n $url ]] || return 0
   echo "== $vault"
+  # A LaunchAgent without Full Disk Access can't read ~/Documents.
+  if [[ -e $vault ]] && ! ls "$vault" >/dev/null 2>&1; then
+    fail "$vault" "no access (grant Full Disk Access to $(realpath "$BASH"))"
+    return
+  fi
   if [[ ! -e $vault ]]; then
     git clone -q "$url" "$vault" || { fail "$vault" "couldn't clone $url"; return; }
   elif [[ ! -d $vault/.git ]]; then
