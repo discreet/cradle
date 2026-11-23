@@ -20,6 +20,8 @@
       "Bash(chezmoi init *)",
       "Bash(chezmoi destroy *)",
       "Bash(chezmoi purge *)"
+    ],
+    "deny": [
     ]
   }
 }

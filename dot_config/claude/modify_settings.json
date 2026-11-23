@@ -11,7 +11,7 @@
 {{- $managed := includeTemplate "claude-settings.json" . | fromJson -}}
 {{- /*
   Both Obsidian vaults are working folders in every session; Claude's file
-  tools can't read or edit the folders named as private in either. With a
+  tools can't read or edit the folders named as private in either (added to
   work vault, each session start and each prompt checks for today's agenda
   and missing Meetings or Slack summaries (journal-check; once a day, so
   later prompts cost nothing).
@@ -35,7 +35,7 @@
 {{-   $_ := set $managed.permissions "additionalDirectories" $vaults -}}
 {{- end -}}
 {{- if $deny -}}
-{{-   $_ := set $managed.permissions "deny" $deny -}}
+{{-   $_ := set $managed.permissions "deny" (concat $managed.permissions.deny $deny) -}}
 {{- end -}}
 {{- /* vault-sync runs without asking (the journal runs it), added to the user's own allow list. */ -}}
 {{- if or .workVaultRepo .personalVaultRepo -}}

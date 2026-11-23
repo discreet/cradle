@@ -180,8 +180,7 @@ obsidian_instructions() {
 }
 personal_vault_only() { # no journal, hooks or daily notes; the vault is still Claude's
   local h=$tmp/home-personal f bad=0
-  for f in .config/claude/skills/journal .local/bin/journal-data .local/bin/obsidian-journal \
-    .local/bin/journal-check \
+    .local/bin/obsidian-journal .local/bin/journal-check \
     Library/LaunchAgents/local.obsidian-journal.plist; do
     [[ ! -e $h/$f ]] || { echo "installed without a work vault: $f"; bad=1; }
   done
@@ -190,7 +189,7 @@ personal_vault_only() { # no journal, hooks or daily notes; the vault is still C
   done
   grep -qF "personal Obsidian vault is \`$pvault\`" "$h/.config/claude/CLAUDE.md" || { echo "CLAUDE.md doesn't name the vault"; bad=1; }
   ! grep -qe 'journal. skill' -e 'Daily notes' "$h/.config/claude/CLAUDE.md" || { echo "CLAUDE.md mentions the journal"; bad=1; }
-  jq -e --arg p "$pvault" --arg h "$h" '.permissions.additionalDirectories == [$p] and .permissions.deny == null
+  jq -e --arg p "$pvault" --arg h "$h" '.permissions.additionalDirectories == [$p]
     and ([.hooks[][].hooks[].command] == ["\($h)/.local/bin/claude-agents"])
     and .permissions.allow == ["Bash(vault-sync)"]' \
     "$h/.config/claude/settings.json" >/dev/null || { echo "settings: wrong vault access or hooks"; bad=1; }
@@ -210,6 +209,11 @@ no_obsidian() {
     "/bin/sh -c '"'"'rex __internal session-start --agent claude 2>/dev/null || true'"'"'"]' \
     "$h/.config/claude/settings.json" >/dev/null || { echo "no Rex hook with Rex"; bad=1; }
   return "$bad"
+}
+  local h
+  for h in "$home" "$home3" "$tmp/home-personal" "$tmp/home-selfhosted"; do
+    jq -e '.permissions.deny as $d
+  done
 }
 claude_agents() { # the SessionStart hook lists user and project agents as Claude Code finds them
   local a=$tmp/agents hook=$home/.local/bin/claude-agents out want
