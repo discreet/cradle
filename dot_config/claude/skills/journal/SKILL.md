@@ -61,8 +61,10 @@ or remove their text. It looks like this:
    session of that day (folder, the user's prompts and Claude's replies,
    shortened) and the user's commits in work git repos. Personal sessions
    and repos are left out on purpose; never add them.
-3. **Slack**, only if Slack tools (`mcp__claude_ai_Slack__*`) are available;
-   otherwise leave Slack out and say so. With `slack_search_public_and_private`
+3. **Slack**, only if Slack tools are available, under either name: the
+   claude.ai connector's `mcp__claude_ai_Slack__*` or the Slack plugin's
+   `mcp__plugin_slack_slack__*` (same tools after the prefix; a session has
+   one or the other). Otherwise leave Slack out and say so. With `slack_search_public_and_private`
    (`sort: timestamp`, `response_format: concise`, following `cursor` until
    there are no more pages):
    - messages the user sent: `filters: "from:<@USER_ID> on:<day>"`;
