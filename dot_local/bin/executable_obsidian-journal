@@ -2,7 +2,6 @@
 # Run every evening at 18:00 by the local.obsidian-journal LaunchAgent (with
 # Homebrew's bash, which needs Full Disk Access to read ~/Documents): if
 # anything happened at work today, Claude writes the day's summary into today's
-# daily note with the journal skill; then vault-sync backs up the vaults, so
 # the backup includes the summary. Log: ~/Library/Logs/obsidian-journal.log.
 # Without access to the work folders it says so here and leaves a marker
 # (no-access) that journal-check reports in the next Claude Code session.
@@ -27,9 +26,7 @@ elif ((status != 0)); then
 elif grep -q '^## ' <<<"$data"; then
   rm -f "$dir/no-access"
   # Read-only tools only: Slack (under the connector's name or the Slack
-  # plugin's; a session has one or the other), Google Calendar, and Drive and
-  # Docs for meeting notes attached to events.
-  tools=("Bash(journal-data *)")
+  # plugin's; a session has one or the other), Google Calendar, Drive and
   for t in search_public_and_private read_thread read_user_profile; do
     tools+=("mcp__claude_ai_Slack__slack_$t" "mcp__plugin_slack_slack__slack_$t")
   done
@@ -38,6 +35,7 @@ elif grep -q '^## ' <<<"$data"; then
   done
   tools+=(mcp__claude_ai_Google_Drive__get_file_metadata mcp__claude_ai_Google_Drive__read_file_content
     mcp__claude_ai_Google_Docs__read_doc)
+  done
   (cd "$dir" && claude -p "Use the journal skill to write today's summary into my work Obsidian daily note. Don't run vault-sync; this run backs up the vaults after you." \
     --permission-mode acceptEdits --allowedTools "${tools[@]}") || echo "The journal run failed."
 else

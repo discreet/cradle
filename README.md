@@ -428,12 +428,6 @@ so a new machine gets them as soon as you sign in to Claude Code with that
 account; a missing connector only turns its feature off. Three things to
 know:
 
-- Headless runs (`claude -p`, like the evening journal) load them too
-  (2.1.314 didn't; 2.1.323 does, checked 2026-11-23 from a terminal), but
-  can only use the tools they're allowed. The evening journal is allowed
-  read tools only: Slack's, Google Calendar's (list, get and search
-  events) and Drive's and Docs' for attached meeting notes. The next
-  session you open still fills in whatever it couldn't reach.
 - Some arrive under another name: Slack can come as the Slack plugin
   (`mcp__plugin_slack_slack__*`) instead of the connector
   (`mcp__claude_ai_Slack__*`), so what uses Slack accepts both.
@@ -499,22 +493,6 @@ or MCP server:
   sections, except Meetings, where it merges and keeps your notes. Meetings
   and Slack come from [claude.ai connectors](#claudeai-connectors); a source
   with nothing that day gets `- Nothing.`
-- A LaunchAgent runs it every evening at 18:00 (on waking, if the Mac was
-  asleep), only if there were work sessions or commits that day, then runs
-  `vault-sync` either way. Log:
-  `~/Library/Logs/obsidian-journal.log`. That run is headless and is
-  allowed only read tools (Slack under either name, Google Calendar, and
-  Drive and Docs for attached notes; see
-  [claude.ai connectors](#claudeai-connectors)), so it writes every
-  section. It needs Full Disk Access for Homebrew's bash (Getting started,
-  After bootstrap); without it, the log says so instead of "Nothing
-  happened today", and the next session tells you and writes that day's
-  summary. For whatever else it couldn't write, a hook (`journal-check`, run when Claude starts and on
-  each message, checking once a day) looks at the last weekday's note; if its Meetings section isn't
-  summarised yet (marked `%% journal %%`, hidden in reading view) or its
-  Slack section is empty, Claude says in one line that it's catching up and
-  fills them in, without asking, then backs up the vaults. The same hook
-  adds today's agenda the same way.
 - `journal-data [YYYY-MM-DD]` prints what the summary is built from: your
   prompts and Claude's replies (shortened) in work sessions and your commits
   in work git repos up to four folders below home, judged by `is-work`. Shell history is not used.

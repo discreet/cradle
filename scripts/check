@@ -441,13 +441,13 @@ evening_run() { # the journal (only when there's work to journal), then the back
   HOME=$e XDG_STATE_HOME=$e/state WORK=1 "$home/.local/bin/obsidian-journal" >/dev/null || return 1
   [[ $(head -1 "$log") == claude*"Don't run vault-sync"* && $(sed -n 2p "$log") == vault-sync ]] ||
     { echo "work day:"; cat "$log"; return 1; }
-  # Read-only connector tools only: Slack under both names, Calendar, Drive and Docs.
+  # Read-only connector tools only: Slack under both names, Calendar, Drive and Docs,
   local t
   for t in mcp__claude_ai_Slack__slack_search_public_and_private mcp__plugin_slack_slack__slack_read_thread \
-    mcp__claude_ai_Google_Calendar__list_events mcp__claude_ai_Google_Docs__read_doc; do
+    mcp__claude_ai_Google_Calendar__list_events mcp__claude_ai_Google_Docs__read_doc \
     grep -qF -- "$t" "$log" || { echo "evening run lacks $t"; return 1; }
   done
-  ! grep -qE 'create_|update_|delete_|respond_|send_' "$log" || { echo "evening run may write:"; cat "$log"; return 1; }
+    { echo "evening run may write:"; cat "$log"; return 1; }
   # No access to ~/Documents: says so, leaves a marker, still backs up; a good run clears it.
   rm "$log"
   out=$(HOME=$e XDG_STATE_HOME=$e/state NOACCESS=1 "$home/.local/bin/obsidian-journal") || return 1
