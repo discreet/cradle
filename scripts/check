@@ -369,8 +369,11 @@ journal_data() { # today's work sessions and commits only, without the evening r
   git -C "$j/home/code/app" -c user.email=work@example.com -c user.name=Me -c commit.gpgsign=false \
     commit -q --allow-empty -m "feat: login page"
   git -C "$j/home/code/app" config user.email work@example.com
+  # A folder find can't read (like ~/Movies/TV or the Photos library) isn't a failure.
+  mkdir -p "$j/home/locked" && chmod 000 "$j/home/locked"
   out=$(HOME=$j/home CLAUDE_CONFIG_DIR=$j/claude XDG_STATE_HOME=$j/home/.local/state \
-    "$home/.local/bin/journal-data" "$today") || return 1
+    "$home/.local/bin/journal-data" "$today") || { chmod 755 "$j/home/locked"; echo "failed on an unreadable folder"; return 1; }
+  chmod 755 "$j/home/locked"
   if ! grep -q '^user: add a login page$' <<<"$out" ||
     ! grep -q '^claude: Added the login page.$' <<<"$out" ||
     ! grep -q ' feat: login page$' <<<"$out" ||
