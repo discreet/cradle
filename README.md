@@ -252,6 +252,8 @@ bottom-left corner:
 - macOS's own `⌃Space` shortcut (select the previous input source) is turned
   off so it can't take the prefix, tmux's or Rex's
   (`run_onchange_after_40-macos-shortcuts.sh`).
+- `⌘⇧4` copies a selected area of the screen to the clipboard, and `⌃⌘⇧4`
+  saves it as a file: macOS's two shortcuts swapped, in the same script.
 - Bash history prefix search is on `C-p`/`C-n` as well as Up/Down.
 - tmux splits side by side with `\` instead of `|`, which needs Shift.
 
@@ -395,7 +397,7 @@ the `superlogical` MCP server.
 | `dot_config/claude/`, `.chezmoitemplates/claude-settings.json` | Claude Code (see below) |
 | `.chezmoiexternal.toml` | Files downloaded from other repos, pinned to a commit (Claude Code skills, Rex's Gruvbox Dark theme) |
 | `private_Library/LaunchAgents/` | The evening ones run their script with Homebrew's bash, which needs Full Disk Access to read `~/Documents` (see After bootstrap). At login: starts Colima (Docker), loads SSH keys from the keychain into ssh-agent (git signs commits through it) and makes Caps Lock a Control key. Every evening at 18:00: the Obsidian journal, then the vault backups |
-| `run_onchange_*` | Re-run `brew bundle`, `mise install` and completion generation when their inputs change, reload the LaunchAgents, register Claude Code's MCP servers, turn off macOS's `⌃Space` shortcut, and write Rex's Settings (Rex machines) |
+| `run_onchange_*` | Re-run `brew bundle`, `mise install` and completion generation when their inputs change, reload the LaunchAgents, register Claude Code's MCP servers, turn off macOS's `⌃Space` shortcut and make `⌘⇧4` copy to the clipboard, and write Rex's Settings (Rex machines) |
 
 ## Claude Code
 
