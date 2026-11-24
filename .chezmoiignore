@@ -21,7 +21,9 @@ scripts
 .local/bin/journal-data
 .local/bin/obsidian-journal
 .local/bin/journal-check
+.local/bin/daily-archive
 Library/LaunchAgents/local.obsidian-journal.plist
+Library/LaunchAgents/local.daily-archive.plist
 {{- end }}
 {{- if not (or .workVaultRepo .personalVaultRepo) }}
 .local/bin/vault-sync

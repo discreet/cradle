@@ -15,7 +15,6 @@
 # evening run itself is left alone.
 set -euo pipefail
 
-vault={{ .workVault | quote }}
 state="${XDG_STATE_HOME:-$HOME/.local/state}/cradle/journal"
 read -r today weekday < <(date '+%F %u')
 back=1 # to the last weekday: Monday -> Friday, Sunday -> Friday
@@ -31,8 +30,9 @@ noaccess=""
 IFS=$'\t' read -r event cwd < <(jq -r '[.hook_event_name // "SessionStart", .cwd // ""] | @tsv')
 [[ $cwd != "$state" ]] || exit 0
 
-folder=$(jq -r '.folder // ""' "$vault/.obsidian/daily-notes.json" 2>/dev/null || true)
-note() { echo "$vault/${folder:+$folder/}$1.md"; }
+# A day's note: at the top of the daily folder, or archived there by month
+# and week (daily-archive knows where).
+note() { "$(dirname "$0")/daily-archive" --path "$1"; }
 # has <note> <section> <regex>: a line of that section matches the regex.
 has() {
   [[ -f $1 ]] && awk -v head="^## ${2}[[:space:]]*\$" -v want="$3" '

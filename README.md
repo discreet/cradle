@@ -132,8 +132,8 @@ versions in `lazy-lock.json`. It ends by listing the steps below.
    template" a hotkey (Settings → Hotkeys) to start meeting notes quickly.
 6. **Let the evening jobs read `~/Documents`** (with a vault): macOS
    blocks LaunchAgents from `~/Documents` unless the program they run has
-   Full Disk Access. The journal and backup agents run Homebrew's bash, so
-   give it that access:
+   Full Disk Access. The journal, backup and daily notes archive agents run
+   Homebrew's bash, so give it that access:
    1. `realpath /opt/homebrew/bin/bash` prints the real program, e.g.
       `/opt/homebrew/Cellar/bash/5.3.20/bin/bash`. Add that path, not the
       `/opt/homebrew/bin/bash` link.
@@ -143,7 +143,8 @@ versions in `lazy-lock.json`. It ends by listing the steps below.
    Homebrew's bash is signed per build, so after `brew upgrade` updates
    bash, add the new path and remove the old one. Without it the evening run
    writes nothing and backs nothing up; its log says so, and the next
-   Claude Code session tells you. To try it now:
+   Claude Code session tells you. The morning archive run only logs it
+   (`~/Library/Logs/daily-archive.log`); `/journal agenda` archives instead. To try it now:
    `launchctl kickstart gui/$(id -u)/local.obsidian-journal` (or
    `local.vault-sync` without a work vault) runs the evening job, then read
    its log.
@@ -229,6 +230,7 @@ The commands behind what Claude does, for reference:
 | Pin a version for a project | `mise use kubectl@1.34` inside the project |
 | Update Neovim plugins | `:Lazy update` in Neovim, then `chezmoi re-add ~/.config/nvim/lazy-lock.json` (the lock file pins every machine to the same versions) |
 | Update a pinned skill | open the history link above its entry in `.chezmoiexternal.toml`, read what changed, put the new commit in its `url`, then `chezmoi apply` |
+| Archive past daily notes now | `daily-archive` (the 04:00 run logs to `~/Library/Logs/daily-archive.log`) |
 | Back up the Obsidian vaults now | `vault-sync` (the evening run logs to `~/Library/Logs/obsidian-journal.log`, or `vault-sync.log` without a work vault) |
 | Refresh GitHub's SSH host keys | only if GitHub rotates them (ssh then refuses to connect): regenerate `private_dot_ssh/known_hosts.github` from the `ssh_keys` list at https://api.github.com/meta |
 
@@ -376,6 +378,7 @@ the `superlogical` MCP server.
 | `Brewfile.tmpl` | Homebrew formulae and apps; a template, so Ghostty is left out on Rex machines |
 | `CLAUDE.md`, `.claude/settings.json` | How Claude Code maintains this repo, and which commands it may run here without asking. Not copied to `~` |
 | `dot_config/claude/skills/journal/`, `dot_local/bin/executable_journal-data`, `dot_local/bin/executable_obsidian-journal`, `dot_local/bin/executable_journal-check.tmpl`, `private_Library/LaunchAgents/local.obsidian-journal.plist.tmpl` | The work vault's journal (see Obsidian); installed only when a work vault is set |
+| `dot_local/bin/executable_daily-archive.tmpl`, `private_Library/LaunchAgents/local.daily-archive.plist.tmpl` | Moves the work vault's past daily notes into month and week folders every morning (see Obsidian); installed only when a work vault is set |
 | `.githooks/commit-msg` | Rejects commit messages that aren't Conventional Commits. `bootstrap.sh` turns it on with `git config core.hooksPath .githooks` |
 | `scripts/check` | Renders every file into a throwaway home folder and checks it with the program that reads it (shellcheck, tmux, git, ssh, plutil, jq, Neovim, Ghostty, Homebrew). Run before every apply |
 | `.chezmoi.toml.tmpl` | The questions chezmoi asks once per machine (name, email, signing key) and where the repo was cloned |
@@ -396,7 +399,7 @@ the `superlogical` MCP server.
 | `dot_local/bin/executable_tmux-pick` | Ghostty + tmux machines only. `~/.local/bin/tmux-pick`: lists tmux sessions, most recent first, to attach to or start a new one; starts one straight away if there are none. Esc or leaving tmux drops to a plain shell |
 | `dot_config/claude/`, `.chezmoitemplates/claude-settings.json` | Claude Code (see below) |
 | `.chezmoiexternal.toml` | Files downloaded from other repos, pinned to a commit (Claude Code skills, Rex's Gruvbox Dark theme) |
-| `private_Library/LaunchAgents/` | The evening ones run their script with Homebrew's bash, which needs Full Disk Access to read `~/Documents` (see After bootstrap). At login: starts Colima (Docker), loads SSH keys from the keychain into ssh-agent (git signs commits through it) and makes Caps Lock a Control key. Every evening at 18:00: the Obsidian journal, then the vault backups |
+| `private_Library/LaunchAgents/` | The Obsidian ones run their script with Homebrew's bash, which needs Full Disk Access to read `~/Documents` (see After bootstrap). At login: starts Colima (Docker), loads SSH keys from the keychain into ssh-agent (git signs commits through it) and makes Caps Lock a Control key. Every morning at 04:00: archives the work vault's past daily notes. Every evening at 18:00: the Obsidian journal, then the vault backups |
 | `run_onchange_*` | Re-run `brew bundle`, `mise install` and completion generation when their inputs change, reload the LaunchAgents, register Claude Code's MCP servers, turn off macOS's `⌃Space` shortcut and make `⌘⇧4` copy to the clipboard, and write Rex's Settings (Rex machines) |
 
 ## Claude Code
@@ -477,8 +480,12 @@ or MCP server:
   notification; resolve it with git in the vault. The journal leaves the
   vaults' backup commits out.
 - **The work vault** is structured and automated, as below.
+- Daily notes are configured from `obsidian/` in this repo: today's is
+  `Daily/YYYY-MM-DD.md` and starts from `Templates/Daily.md` (a `date`
+  property and `## Notes`, `## Meetings`, `## Terminal`, `## Slack`).
 - **Meeting notes during the day:** `/journal agenda` (or "add today's
-  meetings") puts today's Google Calendar events into `## Meetings` as
+  meetings") first archives the past daily notes (above), then puts today's
+  Google Calendar events into `## Meetings` as
   `### 10:00 Title (with who)` headings; type your notes under them, or start
   one with the Meeting template for a meeting that isn't there. Running it
   again adds only new events. On weekdays, Claude does it once a day without

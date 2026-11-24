@@ -111,7 +111,7 @@ and every tag.
 | A Claude Code agent | `dot_config/claude/agents/<name>.md`, only when it needs other tools, model or its own context; know-how alone is a skill. A row in README's Claude Code table. The session-start list (`claude-agents`) finds it by itself |
 | A Claude Code hook | its script in `dot_local/bin/`, registered in `dot_config/claude/modify_settings.json`'s `$hooks` (appended, so others' hooks stay); `scripts/check` asserts each machine's exact SessionStart list |
 | How `cradle-maintainer` works | `dot_config/claude/agents/cradle-maintainer.md`. Rules and decisions stay in this file, which it reads each time; don't copy them into the agent |
-| Obsidian settings or vault templates | `obsidian/`, applied to the work vault by `run_onchange_after_35-obsidian.sh.tmpl` (JSON settings are merged into the vault's `.obsidian/` files) |
+| Obsidian settings or vault templates | `obsidian/`, applied to the work vault by `run_onchange_after_35-obsidian.sh.tmpl` (JSON settings are merged into the vault's `.obsidian/` files). Where past daily notes are archived: `dot_local/bin/executable_daily-archive.tmpl` alone (`--path` answers for `journal-check`); the journal skill's "Finding or creating the note" describes the same layout |
 | A file in the repo that must not land in `~` | `.chezmoiignore` (names starting with `.` are skipped already) |
 
 ## Decisions
@@ -221,8 +221,8 @@ are listed so they aren't proposed again without a reason.
   unregistered MCP servers. Until then, say what to uninstall by hand.
 - **Full Disk Access for the evening jobs** (chosen 2026-11-23): macOS
   blocks LaunchAgents from `~/Documents`, which held the evening journal and
-  backups at "Nothing happened today" from 2026-11-20. The journal and
-  `vault-sync` agents run their scripts with Homebrew's bash
+  backups at "Nothing happened today" from 2026-11-20. The journal,
+  `vault-sync` and `daily-archive` agents run their scripts with Homebrew's bash
   (`/opt/homebrew/bin/bash <script>`, not the `#!/usr/bin/env bash` line,
   which under launchd is Apple's `/bin/bash`), and that bash's real path
   (`realpath`) is granted Full Disk Access by hand, a step after bootstrap.

@@ -41,10 +41,17 @@ or remove their text. It looks like this:
 
 ## Agenda
 
-1. **Day:** today. Skip if Google Calendar tools
+1. **Archive** yesterday's and older notes first: run `daily-archive`, if
+   it's installed, even when the rest of this mode is skipped (it moves each
+   past `YYYY-MM-DD.md` from the top of the daily notes folder into its
+   month and week folder; see "Finding or creating the note"). It prints
+   what it moved. If it skipped a note because the archive already has one
+   for that day, or says it has no access, tell the user what it printed;
+   it never overwrites, so both copies are kept for them to merge.
+2. **Day:** today. Skip the rest if Google Calendar tools
    (`mcp__claude_ai_Google_Calendar__*`) aren't available, and say so.
-2. List today's events (see "Which events" below).
-3. Find or create today's note (below), then add a heading for every event
+3. List today's events (see "Which events" below).
+4. Find or create today's note (below), then add a heading for every event
    that has none, in time order, matching existing headings as above. Keep
    everything already in the section, and end it with `%% agenda %%` unless
    it already ends with `%% journal %%`. Running it again later in the day
@@ -118,11 +125,24 @@ The work vault is named in your global instructions; the journal is only
 ever written there, never to the personal vault. Read
 `<vault>/.obsidian/daily-notes.json` if it exists: `folder` is where daily
 notes live (default: the vault root) and `format` is the file name as a
-Moment.js date format (default `YYYY-MM-DD`). If the note doesn't exist,
-create it from the template named by `template` there (`<vault>/<template>.md`),
-with `{{date}}`, `{{date:FORMAT}}` and `{{title}}` filled in for that day.
-Without a template, create the note with only the sections you write. If the
-note has no `## Meetings`, add it before `## Terminal` (or at the end).
+Moment.js date format (default `YYYY-MM-DD`).
+
+Only today's note stays at the top of that folder, `<folder>/<day>.md`.
+Every morning `daily-archive` moves the older ones into
+`<folder>/YYYY-MM MMMM/Week N/<day>.md`, with the month's English name
+(`Daily/2026-11 November/Week 4/2026-11-24.md`); Week 1 is days 1–7, Week 2
+days 8–14, Week 3 days 15–21 and Week 4 the 22nd to the month's end. So for
+an earlier day, look in its archive folder first, then at the top (not
+archived yet). Never make a second note for a day that has one.
+
+If the note doesn't exist, create it where it belongs: today's at the top;
+an earlier day's (catching up a day nobody opened a note for) straight in
+its archive folder, creating the folders, since the next archive run would
+move it there anyway. Create it from the template named by `template` in
+the settings (`<vault>/<template>.md`), with `{{date}}`, `{{date:FORMAT}}`
+and `{{title}}` filled in for that day. Without a template, create the note
+with only the sections you write. If the note has no `## Meetings`, add it
+before `## Terminal` (or at the end).
 
 ## Leave out
 

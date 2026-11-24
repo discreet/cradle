@@ -180,8 +180,8 @@ obsidian_instructions() {
 }
 personal_vault_only() { # no journal, hooks or daily notes; the vault is still Claude's
   local h=$tmp/home-personal f bad=0
-    .local/bin/obsidian-journal .local/bin/journal-check \
-    Library/LaunchAgents/local.obsidian-journal.plist; do
+    .local/bin/obsidian-journal .local/bin/journal-check .local/bin/daily-archive \
+    Library/LaunchAgents/local.obsidian-journal.plist Library/LaunchAgents/local.daily-archive.plist; do
     [[ ! -e $h/$f ]] || { echo "installed without a work vault: $f"; bad=1; }
   done
   for f in .local/bin/vault-sync Library/LaunchAgents/local.vault-sync.plist; do
@@ -197,7 +197,8 @@ personal_vault_only() { # no journal, hooks or daily notes; the vault is still C
 }
 no_obsidian() {
   local h=$tmp/home-selfhosted bad=0 f
-  for f in .local/bin/journal-data .local/bin/vault-sync Library/LaunchAgents/local.vault-sync.plist; do
+  for f in .local/bin/journal-data .local/bin/daily-archive .local/bin/vault-sync \
+    Library/LaunchAgents/local.vault-sync.plist Library/LaunchAgents/local.daily-archive.plist; do
     [[ ! -e $h/$f ]] || { echo "installed without a vault: $f"; bad=1; }
   done
   ! grep -q Obsidian "$h/.config/claude/CLAUDE.md" || { echo "CLAUDE.md mentions Obsidian"; bad=1; }
@@ -314,6 +315,15 @@ journal_check() { # catches up the last weekday's missing summaries and adds tod
   says "Slack summary" -- "Meetings" || return 1
   printf '## Meetings\n- Nothing.\n%%%% journal %%%%\n## Slack\n- Nothing.\n' >"$old"
   [[ -z $(run /somewhere) ]] || { echo "asked although everything is filled in"; return 1; }
+  # Archived by month and week, it's found there.
+  local archived kept
+  kept=$(cat "$old") && rm "$old"
+  archived=$("$home/.local/bin/daily-archive" --path "$day")
+  [[ $archived == "$vault/Daily/"*"/Week "[1-4]"/$day.md" ]] || { echo "archive path: $archived"; return 1; }
+  mkdir -p "${archived%/*}" && echo "$kept" >"$archived"
+  rm -rf "$st"
+  [[ -z $(run /somewhere) ]] || { echo "didn't find the archived note"; return 1; }
+  mv "$archived" "$old"
   rm -rf "$st"; rm -f "$note"
   printf '## Slack\n' >"$old"
   [[ -n $(run /somewhere) ]] || { echo "no offer"; return 1; }
@@ -381,6 +391,42 @@ journal_data() { # today's work sessions and commits only, without the evening r
     echo "$out"
     return 1
   fi
+}
+daily_archive() { # moves past daily notes into month/week folders; today's, others' and taken paths stay
+  local d=$tmp/archive bin=$tmp/archive/bin v=$vault/Daily today tomorrow out status f
+  today=$(date +%F) tomorrow=$(date -v+1d +%F)
+  mkdir -p "$bin" "$vault/.obsidian" "$d"
+  # A copy beside a stub vault-sync, which it runs only when it moved something.
+  cp "$home/.local/bin/daily-archive" "$bin/"
+  printf '#!/bin/sh\necho synced >>"%s/synced"\n' "$d" >"$bin/vault-sync"
+  chmod +x "$bin"/*
+  echo '{"folder":"Daily"}' >"$vault/.obsidian/daily-notes.json"
+  rm -rf "$v" && mkdir -p "$v/2025-01 January/Week 2"
+  for f in 2025-01-07 2025-01-08 2025-01-21 2025-01-22 2025-01-31 2024-02-29 2025-02-30 "$today" "$tomorrow"; do
+    echo "$f" >"$v/$f.md"
+  done
+  echo mine >"$v/notes.md"
+  echo kept >"$v/2025-01 January/Week 2/2025-01-08.md"
+  out=$("$bin/daily-archive" 2>&1) && status=0 || status=$?
+  ((status == 1)) || { echo "exit $status with a taken path: $out"; return 1; }
+  for f in "2025-01 January/Week 1/2025-01-07" "2025-01 January/Week 3/2025-01-21" \
+    "2025-01 January/Week 4/2025-01-22" "2025-01 January/Week 4/2025-01-31" "2024-02 February/Week 4/2024-02-29"; do
+    [[ $(cat "$v/$f.md" 2>/dev/null) == "${f##*/}" ]] || { echo "not archived: $f"; echo "$out"; return 1; }
+  done
+  for f in 2025-01-08 2025-02-30 "$today" "$tomorrow" notes; do
+    [[ -f $v/$f.md ]] || { echo "moved: $f"; return 1; }
+  done
+  [[ $(cat "$v/2025-01 January/Week 2/2025-01-08.md") == kept && $out == *"Skipped Daily/2025-01-08.md"* ]] ||
+    { echo "a taken path: $out"; return 1; }
+  [[ $(cat "$d/synced") == synced ]] || { echo "no backup after moving"; return 1; }
+  rm "$v/2025-01-08.md"
+  out=$("$bin/daily-archive" 2>&1) || { echo "second run: $out"; return 1; }
+  [[ $out != *Moved* && $(wc -l <"$d/synced") -eq 1 ]] || { echo "second run did something: $out"; return 1; }
+  [[ $("$bin/daily-archive" --path "$today") == "$v/$today.md" &&
+    $("$bin/daily-archive" --path 2025-01-31) == "$v/2025-01 January/Week 4/2025-01-31.md" &&
+    $("$bin/daily-archive" --path 2023-03-14) == "$v/2023-03 March/Week 2/2023-03-14.md" ]] ||
+    { echo "--path is wrong"; return 1; }
+  rm -rf "$v" "$d"
 }
 vault_sync() { # clone, first backup, rebase onto another machine, conflicts, empty folder
   local stub=$tmp/stub other=$tmp/other-machine sync=$home/.local/bin/vault-sync
@@ -632,6 +678,7 @@ check "Obsidian: a personal vault alone gets no journal" personal_vault_only
 check "Obsidian: nothing installed without a vault" no_obsidian
 check "Obsidian: Daily notes settings and template applied to the work vault" obsidian_apply
 check "Obsidian: journal-data finds the day's work sessions and commits only" journal_data
+check "Obsidian: daily-archive moves past daily notes into month and week folders" daily_archive
 check "Obsidian: vault-sync backs up, merges other machines, stops on conflicts" vault_sync
 check "Obsidian: the evening run journals first, then backs up" evening_run
 check "Obsidian: sessions catch up missing summaries and add today's agenda, once each" journal_check
