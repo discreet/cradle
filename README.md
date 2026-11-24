@@ -298,7 +298,10 @@ only that one's files:
     same `⌃Space` prefix (`c`, `n`/`p`, `1`-`9`, `Tab`, `\`, `-`, `hjkl`,
     `⌃hjkl` to resize until Esc, `z`, `;`, `x`, `s`, `(`/`)`, `L`, `S`, `$`,
     `d` to close the window with sessions left running, `[` copy mode with
-    vi keys, `]`, `r` to reload). Keep it in step with `tmux.conf`.
+    vi keys, `]`, `r` to reload). `Tab`, `;` and `L` all run Navigate Back,
+    which goes to the previous pane, tab, session or host, not only the last
+    window, pane or session as in tmux: Rex replaced its separate "recent"
+    actions with it in `0.1.0-preview.34`. Keep it in step with `tmux.conf`.
     Private Rex servers (`rex.host{...}`) go in `~/.config/rex/local.lua`,
     which `init.lua` loads if it's there and cradle doesn't manage. After
     editing either: `rex config check`, then `rex config reload` (prefix

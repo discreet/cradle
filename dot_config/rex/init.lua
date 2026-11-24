@@ -20,7 +20,12 @@ end
 bind("ctrl+space", "pane.send_key", { key = "ctrl+space" })
 
 -- Tabs (tmux windows): c new, n/p next/prev, 1-9 jump, w pick, , rename,
--- & close, Tab last.
+-- & close, Tab back.
+--
+-- Tab, ; and L are tmux's last window, pane and session. Rex 0.1.0-preview.34
+-- replaced its per-tab, per-session and per-pane "recent" actions with one
+-- history, client.navigate.back, so all three go back to wherever you were
+-- last: the previous pane, tab, session or host, not only within one tab.
 bind("c", "client.tab.new")
 bind("n", "client.tab.next")
 bind("p", "client.tab.previous")
@@ -30,10 +35,10 @@ end
 bind("w", "pane.go_to")
 bind(",", "client.tab.rename")
 bind("shift+7", "client.tab.close") -- &
-bind("tab", "client.tab.recent.in_session")
+bind("tab", "client.navigate.back")
 
 -- Panes: \ splits side by side, - top and bottom; hjkl moves; z zoom,
--- ; last pane, x close.
+-- ; back, x close.
 bind("\\", "pane.split", { direction = "right" })
 bind("-", "pane.split", { direction = "down" })
 bind("h", "pane.focus.left")
@@ -41,7 +46,7 @@ bind("j", "pane.focus.down")
 bind("k", "pane.focus.up")
 bind("l", "pane.focus.right")
 bind("z", "pane.zoom")
-bind(";", "pane.focus_recent.in_tab")
+bind(";", "client.navigate.back")
 bind("x", "pane.close")
 
 -- C-hjkl resizes by 5 and stays in a resize mode, so more C-hjkl keep
@@ -66,12 +71,12 @@ for key, dir in pairs(dirs) do
   bind("ctrl+" .. key, "resize_and_hold", { direction = dir })
 end
 
--- Sessions: s pick, ( ) prev/next, L last, $ rename, S new, d detach (closes
+-- Sessions: s pick, ( ) prev/next, L back, $ rename, S new, d detach (closes
 -- the window; the sessions keep running).
 bind("s", "session.switch")
 bind("shift+9", "session.previous") -- (
 bind("shift+0", "session.next") -- )
-bind("shift+l", "session.recent")
+bind("shift+l", "client.navigate.back")
 bind("shift+4", "session.rename") -- $
 bind("shift+s", "session.new")
 bind("d", "client.window.close")
