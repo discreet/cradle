@@ -164,7 +164,11 @@ are listed so they aren't proposed again without a reason.
   close to them as it allows (the user's call, 2026-11-20): `init.lua`
   gives it `tmux.conf`'s keys on the same `C-Space` prefix, so a change to
   `tmux.conf`'s keys goes into `init.lua` too; private hosts go in the
-  unmanaged `local.lua` it loads. Rex's Settings are macOS defaults
+  unmanaged `local.lua` it loads. The user's Rex shortcuts are those ported
+  tmux keys (asked 2026-11-24): when asked for one, answer with the prefix
+  key from `init.lua`, not Rex's built-in Command keys; if Rex drops or
+  renames an action, rebind the same tmux key to its nearest replacement.
+  Rex's Settings are macOS defaults
   (`com.superlogical.rex`), and `run_onchange_after_41-rex-settings.sh.tmpl`
   writes only those that differ from Rex's defaults; importing the theme
   is the one step by hand.
