@@ -296,8 +296,9 @@ only that one's files:
   Beta Discord. Rex is set up to work like Ghostty + tmux:
   - **Keys:** `~/.config/rex/init.lua` gives Rex `tmux.conf`'s keys on the
     same `⌃Space` prefix (`c`, `n`/`p`, `1`-`9`, `Tab`, `\`, `-`, `hjkl`,
-    `⌃hjkl` to resize until Esc, `z`, `;`, `x`, `s`, `(`/`)`, `L`, `S`, `$`,
-    `d` to close the window with sessions left running, `[` copy mode with
+    `⌃hjkl` to resize until Esc, `z`, `;`, `x`, `s`, `(`/`)`, `L`, `S`,
+    `X` to close the session (`⇧⌘T` undoes it), `$`, `d` to close the
+    window with sessions left running, `[` copy mode with
     vi keys, `]`, `r` to reload). `Tab`, `;` and `L` all run Navigate Back,
     which goes to the previous pane, tab, session or host, not only the last
     window, pane or session as in tmux: Rex replaced its separate "recent"
@@ -522,5 +523,5 @@ or MCP server:
 | `vim` | Neovim. NeoBundle is now lazy.nvim. ALE, vim-go and black are now LSP and conform, with Neovim's built-in completion. Helm charts get helm-ls and Compose files get Docker's language server (filetype rules in `lua/config/filetypes.lua`). polyglot and the syntax plugins are replaced by Neovim's built-in syntax highlighting. ack.vim is now fzf-lua. gitgutter is now gitsigns. Dropped: fugitive, surround, repeat, endwise, targets, tabular, indent guides, vim-test, markdown-preview and TypeScript support |
 | `git` | Separate personal (GitHub) and work (any git host) identities, chosen by the repo's remote. Commits and tags are signed with SSH, not GPG. `git pull` rebases instead of merging. Current git settings are added (zdiff3, histogram diff, autoSetupRemote, etc.); settings that are now git's or Apple's defaults are dropped. Aliases that duplicated others or that signing-by-default made redundant (`ca`, `amend`, `ci`, `cs`, `csa`, `ris`, `tsa`, `dc`, `head`, `fap`, `r`, `ra`, `lg`, `lgs`) are removed, as are the rarely used `rero`, `rht`, `dh1`, `ff`, `ms`, `mc`, `ignore`/`ignored`/`acknowledge`, and the plain shortcuts `co`, `sw`, `b`, `aa`, `di`, `ds`, `rc`, `fa`, `dlb`, `drb`. Fetch no longer prunes local tags. The log aliases share one `--pretty=line` format |
 | `gpg` | Dropped. SSH keys go in the macOS keychain instead of gpg-agent |
-| `tmux` | Same prefix (`C-Space`), colours and `hjkl` pane movement. Splits are now `\` and `-`, resizing moved to `Ctrl-hjkl` so `L` jumps back to the last session again, and `S` creates a named session. Windows and panes are numbered from 1; mouse support is on; copy mode uses vi-style `v`/`y` (to the macOS clipboard through Ghostty). The status bar shows the session name instead of the kube context, plus a PREFIX flag and the date. Settings tmux removed or now defaults are dropped, and `reattach-to-user-namespace` is gone |
+| `tmux` | Same prefix (`C-Space`), colours and `hjkl` pane movement. Splits are now `\` and `-`, resizing moved to `Ctrl-hjkl` so `L` jumps back to the last session again, `S` creates a named session and `X` closes the current one after asking. Windows and panes are numbered from 1; mouse support is on; copy mode uses vi-style `v`/`y` (to the macOS clipboard through Ghostty). The status bar shows the session name instead of the kube context, plus a PREFIX flag and the date. Settings tmux removed or now defaults are dropped, and `reattach-to-user-namespace` is gone |
 | `alacritty` | Ghostty, with its built-in `Gruvbox Dark` theme (the same palette). Block cursor everywhere, including the prompt; Option works as Alt. The first window at launch opens a tmux session picker |

@@ -71,14 +71,16 @@ for key, dir in pairs(dirs) do
   bind("ctrl+" .. key, "resize_and_hold", { direction = dir })
 end
 
--- Sessions: s pick, ( ) prev/next, L back, $ rename, S new, d detach (closes
--- the window; the sessions keep running).
+-- Sessions: s pick, ( ) prev/next, L back, $ rename, S new, X close (Undo
+-- Close, ⇧⌘T, brings it back), d detach (closes the window; the sessions
+-- keep running).
 bind("s", "session.switch")
 bind("shift+9", "session.previous") -- (
 bind("shift+0", "session.next") -- )
 bind("shift+l", "client.navigate.back")
 bind("shift+4", "session.rename") -- $
 bind("shift+s", "session.new")
+bind("shift+x", "session.close")
 bind("d", "client.window.close")
 
 -- Copy: [ copy mode, ] paste. r reloads this file.
