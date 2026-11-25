@@ -25,9 +25,9 @@ scripts
 Library/LaunchAgents/local.obsidian-journal.plist
 Library/LaunchAgents/local.daily-archive.plist
 {{- end }}
-{{- if not (or .workVaultRepo .personalVaultRepo) }}
+{{- if not (or .workVaultRepo .personalVaultRepo .workClaudeRepo) }}
 .local/bin/vault-sync
 {{- end }}
-{{- if or .workVault (not (or .workVaultRepo .personalVaultRepo)) }}
+{{- if or .workVault (not (or .workVaultRepo .personalVaultRepo .workClaudeRepo)) }}
 Library/LaunchAgents/local.vault-sync.plist
 {{- end }}

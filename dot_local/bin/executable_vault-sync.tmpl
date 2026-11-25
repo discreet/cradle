@@ -74,4 +74,7 @@ sync() { # sync <vault> <repo url>
 echo "== $(date)"
 sync {{ .workVault | quote }} {{ .workVaultRepo | quote }}
 sync {{ .personalVault | quote }} {{ .personalVaultRepo | quote }}
+# Not a vault, the same backup: Claude Code's private work extras
+# (run_after_46-claude-work links them into Claude's config).
+sync {{ joinPath .chezmoi.homeDir ".config/claude/work" | quote }} {{ .workClaudeRepo | quote }}
 exit "$failed"

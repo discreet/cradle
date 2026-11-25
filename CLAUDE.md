@@ -60,6 +60,7 @@ that need it. After each change, put anything worth keeping in one place:
 Don't keep a decision or a rule in Claude Code's memory or agentdb: it would
 be missing on the next machine. When one turns up there, move it here.
 
+
 ## Commits and releases
 
 - **Commits follow [Conventional Commits](https://www.conventionalcommits.org):**
@@ -109,8 +110,10 @@ and every tag.
 | A Neovim plugin | `dot_config/nvim/lua/plugins/`; then `chezmoi re-add ~/.config/nvim/lazy-lock.json` after it installs. Its language server goes in mise and `vim.lsp.enable` in `plugins/lsp.lua` |
 | Claude Code settings, plugins, MCP servers | see the Claude Code section of README.md |
 | A Claude Code agent | `dot_config/claude/agents/<name>.md`, only when it needs other tools, model or its own context; know-how alone is a skill. A row in README's Claude Code table. The session-start list (`claude-agents`) finds it by itself |
+| A Claude Code skill | `dot_config/claude/skills/<name>/SKILL.md`, with longer reference notes in files beside it. A skill that needs the work vault goes in `.chezmoiignore`'s `workVault` block and `scripts/check`'s `personal_vault_only` list. A row in README's Layout table. Keep employer detail out: the skill finds it at run time and keeps it in the work vault. A work skill or agent goes in the private work extras, never here; see "Work extras" in Decisions |
 | A Claude Code hook | its script in `dot_local/bin/`, registered in `dot_config/claude/modify_settings.json`'s `$hooks` (appended, so others' hooks stay); `scripts/check` asserts each machine's exact SessionStart list |
 | How `cradle-maintainer` works | `dot_config/claude/agents/cradle-maintainer.md.tmpl` (a template for its agentdb servers' paths). Rules and decisions stay in this file, which it reads each time; don't copy them into the agent |
+| Anything that only works through a claude.ai connector (Slack, Google...) | the feature where it belongs, plus a row in README's "claude.ai connectors" table: the connector, the access it needs, and what depends on it. Headless `claude -p` runs load connectors (since 2.1.323) but may use only the tools in their `--allowedTools`: allow read tools by exact name, and let the next interactive session catch up what a run couldn't reach |
 | Obsidian settings or vault templates | `obsidian/`, applied to the work vault by `run_onchange_after_35-obsidian.sh.tmpl` (JSON settings are merged into the vault's `.obsidian/` files). Where past daily notes are archived: `dot_local/bin/executable_daily-archive.tmpl` alone (`--path` answers for `journal-check`); the journal skill's "Finding or creating the note" describes the same layout |
 | A file in the repo that must not land in `~` | `.chezmoiignore` (names starting with `.` are skipped already) |
 
@@ -211,17 +214,62 @@ are listed so they aren't proposed again without a reason.
   `StrictHostKeyChecking accept-new`, keepalives and `ControlMaster` were
   declined.
 - **Docker:** Colima from mise, started by a LaunchAgent, default VM size.
-- **Work agents are the user's alone** (rule set when they were created,
-  recorded 2026-11-25): the specialized agents Claude builds for work repos
-  are for the user's use only. They are never committed to the work repo,
-  pushed or shared: each repo keeps `/.claude/agents/` out of git in
-  `.git/info/exclude`, never in a tracked `.gitignore`. A repo's own
-  `.claude/skills/` may be tracked; that's the repo's call. Keep that rule for
-  every new one. Today they live only on this disk, linked into
-  `~/.config/claude/agents/` by hand, with no backup: an open problem. A
-  private home that is backed up (its own private repo on the work host,
-  cloned and linked by cradle through a chezmoi question, or a hidden
-  folder in the work vault) is proposed, not yet chosen.
+- **Claude Code:** from mise with its auto-updater off; config in
+  `~/.config/claude` via `CLAUDE_CONFIG_DIR` (set in mise's `[env]`, so it
+  reaches claude from shells, shims and launchd alike); terminal only, no desktop app or
+  IDE extension. MCP servers are registered by
+  `run_onchange_after_45-claude-mcp.sh.tmpl`. agentdb (npm, ruvnet) is the
+  memory MCP server, with separate work and personal databases
+  (`~/.local/bin/agentdb-mcp`). A session is work when git's identity in its
+  folder is work or the folder is under a work folder (`workFolders`, asked
+  per machine with a work identity); anything else is personal. One shared
+  database, one per project and marker files were rejected. cradle alone
+  reads both (asked 2026-11-25), so it manages the setup with every lesson:
+  `agentdb-mcp work|personal` picks a database outright, the MCP script
+  registers `agentdb-work` at local scope for the cradle folder only, and
+  `cradle-maintainer` declares both in its own `mcpServers`, from any
+  folder. Other sessions still see only their own database. Claude uses it
+  because the global instructions (`dot_config/claude/CLAUDE.md.tmpl`) say
+  to: `reflexion_retrieve` before real tasks, `reflexion_store` after.
+  Possible later step, if Claude skips that too often: Claude Code hooks that
+  recall at `SessionStart` and store at `Stop`. Hooks can't call MCP tools,
+  so they'd run the `agentdb` CLI on the same database (reuse
+  `agentdb-mcp`'s work/personal choice); first check the CLI covers recall
+  and store.
+  `cradle-maintainer` (`dot_config/claude/agents/`) is the expert on this
+  repo: sessions elsewhere hand it every setup change and question. It
+  stops before `chezmoi apply`, so the user's OK stays with the main
+  session, which messages it back to commit and push. It reads this file
+  and README.md every time instead of repeating them. It is the only custom
+  agent for now (2026-11-05). Tabled, not rejected: a `work-lead`/
+  `personal-lead` orchestrator run as the main session (`claude --agent`),
+  a read-only `pm` agent over Slack, Google and other work tools, and a generic
+  `repo-worker`, with repo knowledge kept in each repo's own CLAUDE.md
+  rather than per-repo agents here. Don't propose them again unless asked.
+  Each session's start shows the user its custom agents (user and
+  project, found at runtime) through a SessionStart hook's `systemMessage`
+  (`~/.local/bin/claude-agents`, asked 2026-11-20); it adds nothing to
+  Claude's context.
+  The Skylight Calendar MCP server (`skylight-mcp`) was removed on
+  2026-11-20 at the user's request; the MCP script still unregisters it on
+  old machines until they've all applied that.
+- **Work extras are the user's alone** (rule set when the work agents were
+  created; skills moved 2026-11-25): the specialized agents, skills and
+  settings Claude builds for work are for the user's use only. Never in
+  this repo or its history (on 2026-11-25 the user had two work skills and
+  every mention of them purged from it, tags recreated and force-pushed),
+  never committed to a work repo, pushed publicly or shared. A work repo
+  keeps its agents out of git in `.git/info/exclude`, never a tracked
+  `.gitignore`; a repo's own tracked `.claude/skills/` is the repo's call.
+  Their home is `~/.config/claude/work`, a private repo on the work host
+  (the `workClaudeRepo` question; chosen over a hidden folder in the work
+  vault): `run_after_46-claude-work` links its skills and agents into
+  Claude's config, `modify_settings.json` merges its `settings.json`, the
+  journal follows its `journal.md` and the evening run allows its
+  `journal-tools`, and `vault-sync` clones and backs it up. Its README holds
+  the decisions about what's in it. cradle's side stays generic: name no
+  work skill, service or rule in this repo, commit messages or tags. Agents
+  still in work repos' `.claude/agents/` belong there too.
 - **Apps:** Homebrew installs only Obsidian, plus Ghostty on Ghostty
   machines. Firefox and Slack were removed on 2026-11-20 (Slack is still
   used through its claude.ai connector). The Slack app comes pre-installed
@@ -256,6 +304,63 @@ are listed so they aren't proposed again without a reason.
   `~/Documents/cradle`. `workFolders` is `~/Documents/work`. Flat `code/`,
   grouping by product and a single shared vault were not chosen. README's
   Folders section is the reference.
+- **Obsidian:** two vaults, work and personal (chosen over one shared
+  vault). Claude uses both as plain files (extra working folders), not
+  through an MCP server or plugin, and its instructions say to use the one
+  matching the session (`is-work`, the same rule as agentdb) and reach into
+  the other only when asked. Each machine is asked for a work vault (only
+  with a work identity) and a personal vault, each with folders Claude must
+  not read (denied to its file tools, forbidden otherwise by the global
+  instructions). The personal vault is unstructured and ad hoc: cradle writes
+  nothing to it, no daily notes, templates or journal. Obsidian doesn't sync
+  between machines; each vault is backed up to its own private git repo
+  (personal on GitHub, work on the work host) by `vault-sync` (chosen over
+  Obsidian Sync, iCloud Drive and Time Machine): every evening at 18:00 once
+  the journal has written the day's note (its run starts `vault-sync`; a
+  machine without a work vault has its own 18:00 agent), and again after
+  the journal skill fills in the Slack and Meetings summaries in the next
+  interactive session (allowed without asking). Everything below is
+  the work vault only. The `journal` skill
+  summarises the day's work Claude Code sessions and git commits (personal
+  ones are left out) into a
+  `## Terminal` section of the daily note, run by a LaunchAgent every evening
+  at 18:00. Meetings (Google Calendar, plus decisions and action items from
+  attached meeting notes) and Slack conversations go in `## Meetings` and
+  `## Slack` via the claude.ai connectors (Slack under either name, the
+  connector's `mcp__claude_ai_Slack__*` or the plugin's
+  `mcp__plugin_slack_slack__*`). Headless `claude -p` didn't load
+  connectors in 2.1.314 but does in 2.1.323 (2026-11-23), so the evening
+  run writes every section (chosen 2026-11-23), allowed read tools only:
+  Slack's search, thread and profile reads under both names, Google
+  Calendar's list, get and search, Drive's and Docs' reads for
+  attached notes, and the tools the work extras' `journal-tools` lists;
+  never create, update, delete or respond. A hook (`journal-check`, on SessionStart
+  and UserPromptSubmit, once a day) has the next interactive session catch
+  up whichever is missing, saying so in one line without asking, then back
+  up the vaults (chosen over offering first, on-demand only and local MCP
+  servers with tokens). The user takes
+  their own meeting notes in `## Meetings` under `### HH:MM` headings, from
+  `/journal agenda` (run by the same hook each weekday without asking, including in a
+  session left open overnight) or `Templates/Meeting.md`; the
+  journal matches them to events by time and never edits the user's text
+  (chosen over AI note-takers, attached notes docs and one note per
+  meeting). Section markers `%% agenda %%`/`%% journal %%` record progress. Daily notes are managed from `obsidian/`: `Daily/YYYY-MM-DD.md`,
+  from `Templates/Daily.md`, which the repo overwrites (the user chose a
+  managed template over a create-once one). Only today's note stays at
+  the top of `Daily/` (chosen 2026-11-24): `daily-archive` moves earlier
+  ones to `Daily/YYYY-MM MMMM/Week N/` (year first, so months sort and
+  years stay apart; exactly four weeks a month: days 1–7, 8–14, 15–21,
+  22 to the end), every morning at 04:00 from a LaunchAgent and at the
+  start of `/journal agenda`, never in the 18:00 run. Obsidian's Daily
+  notes settings stay on `Daily/`, so it and the journal create today's
+  note at the top. It never overwrites, deletes or touches files not
+  named like a date; a taken archive path is reported and skipped. A
+  past day's note the journal must create (a catch-up) goes straight
+  into its archive folder. Declined (2026-11-24): allowing `daily-archive`
+  without a prompt in Claude's settings, and a line about it in the global
+  instructions; the 04:00 run (with Full Disk Access) does the archiving,
+  and an agenda run asks first. Shell history was left out on purpose; per-session summaries and
+  an on-demand-only journal were declined.
 - **Google Workspace:** through claude.ai connectors only (Calendar for the
   journal; Drive, Docs and Sheets for searching and editing), connected in
   the claude.ai account, so nothing for it lives in this repo beyond the

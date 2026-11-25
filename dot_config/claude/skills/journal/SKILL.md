@@ -1,3 +1,7 @@
+---
+name: journal
+description: Write or refresh the "Meetings", "Terminal" and "Slack" sections (and any the private work extras add) of a daily note in the user's work Obsidian vault, summarising a day's Google Calendar meetings (with the user's own notes), work Claude Code sessions, work git commits and the Slack conversations the user took part in or was mentioned in. Also adds today's meetings to the note as headings to take notes under (`/journal agenda`). Use when the user asks to journal, log or summarise their day (or a given date) into Obsidian, or to add today's meetings or agenda to their daily note; the evening LaunchAgent also runs it.
+---
 
 # Journal
 
@@ -108,6 +112,10 @@ or remove their text. It looks like this:
 7. **Update the note:** replace Terminal and Slack if the note has them (up to
    the next `## ` heading) and touch nothing else; otherwise append them.
    Merge Meetings as described above instead of replacing it.
+8. **Work steps:** if `~/.config/claude/work/journal.md` exists (the
+   user's private work extras), follow it for the same day, even when step
+   5 found nothing else. Sections it adds are its own; leave them to it,
+   and its rules hold here too.
 9. **Back up:** run `vault-sync`, if it's installed, so the vault's backup
    repo has the new summary (it's allowed without asking). Skip this when
    your prompt says the run backs up after you (the evening run). If it

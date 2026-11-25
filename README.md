@@ -50,6 +50,15 @@ run, and a few steps only you can do afterwards.
   org or under your work account (then give that account's name as a work
   org too), so it's committed and pushed as work. Skip a repo to leave that
   vault without a backup.
+- **A private repo for Claude Code's work extras** (optional, with a work
+  identity): your work skills, agents and settings that must stay private,
+  on the work host like the work vault's repo. Give its SSH URL, or leave it
+  blank (see Claude Code).
+- **claude.ai account** for Claude Code, with its connectors connected at
+  claude.ai → Settings → Connectors (see [claude.ai connectors](#claudeai-connectors)):
+  Slack and Google Calendar for the journal, and Google Drive, Docs and
+  Sheets. They belong to the account, so this is done once, not per
+  machine.
 - **Discord account in the Rex Beta Discord**: needed to download Rex if
   this machine will use it, and optional otherwise, for the `superlogical`
   MCP server.
@@ -74,6 +83,7 @@ other questions only when you give the vault.
 | Personal vault folders Claude must not read | As above |
 | Private git repo for the personal vault | Its SSH URL |
 | Terminal | `ghostty` (Ghostty with tmux) or `rex` (Rex, installed by hand) |
+| Private git repo for Claude Code's work extras | Its SSH URL, or blank (asked with a work identity) |
 
 ### Run bootstrap
 
@@ -125,7 +135,8 @@ versions in `lazy-lock.json`. It ends by listing the steps below.
    trust it when asked; Claude Code runs no hooks (the journal's) until you do.
 4. **Fetch the vaults:** `vault-sync`, once the keys are on their accounts. It
    clones each vault from its backup repo, or makes the first backup if the
-   repo is empty.
+   repo is empty, and clones Claude Code's work extras; then `chezmoi apply`
+   links their skills and agents.
 5. **Open the vaults in Obsidian:** "Open folder as vault" for each vault
    folder. Then run `chezmoi apply` once, so the work vault gets its Daily
    notes settings and templates. Optionally, give "Templates: Insert
@@ -375,12 +386,14 @@ yet. Status as of 2026-11-03.
 To recheck, ask Claude: it reads Rex's docs, changelog and feedback through
 the `superlogical` MCP server.
 
+
 ## Layout
 
 | Path | What it configures |
 |---|---|
 | `Brewfile.tmpl` | Homebrew formulae and apps; a template, so Ghostty is left out on Rex machines |
 | `CLAUDE.md`, `.claude/settings.json` | How Claude Code maintains this repo, and which commands it may run here without asking. Not copied to `~` |
+| `obsidian/` | Obsidian's Daily notes and Templates settings and the vault's templates (daily note, meeting), applied to the work vault by `run_onchange_after_35-obsidian.sh.tmpl`. Not copied to `~` |
 | `dot_config/claude/skills/journal/`, `dot_local/bin/executable_journal-data`, `dot_local/bin/executable_obsidian-journal`, `dot_local/bin/executable_journal-check.tmpl`, `private_Library/LaunchAgents/local.obsidian-journal.plist.tmpl` | The work vault's journal (see Obsidian); installed only when a work vault is set |
 | `dot_local/bin/executable_daily-archive.tmpl`, `private_Library/LaunchAgents/local.daily-archive.plist.tmpl` | Moves the work vault's past daily notes into month and week folders every morning (see Obsidian); installed only when a work vault is set |
 | `.githooks/commit-msg` | Rejects commit messages that aren't Conventional Commits. `bootstrap.sh` turns it on with `git config core.hooksPath .githooks` |
@@ -397,7 +410,7 @@ the `superlogical` MCP server.
 | `dot_config/tmux/tmux.conf`, `dot_config/mise/conf.d/tmux.toml` | tmux (prefix `C-Space`; the built-in keys it relies on are listed at the top) and its install. Ghostty + tmux machines only |
 | `dot_config/ghostty/config` | Ghostty (Gruvbox dark). Its first window at launch runs `tmux-pick`. Ghostty + tmux machines only |
 | `dot_config/rex/init.lua` | Rex's keys (`tmux.conf`'s, on the same `C-Space` prefix), actions and hosts; loads the unmanaged `local.lua` beside it. Rex machines only, with the Gruvbox Dark theme file from `.chezmoiexternal.toml` |
-| `dot_local/bin/executable_vault-sync.tmpl`, `private_Library/LaunchAgents/local.vault-sync.plist.tmpl` | Backs up each Obsidian vault to its private git repo (see Obsidian); installed only when a vault repo is set. The LaunchAgent only without a work vault; with one, the journal's evening run starts the backup |
+| `dot_local/bin/executable_vault-sync.tmpl`, `private_Library/LaunchAgents/local.vault-sync.plist.tmpl` | Backs up each Obsidian vault to its private git repo (see Obsidian), and Claude Code's work extras to theirs; installed only when one of those repos is set. The LaunchAgent only without a work vault; with one, the journal's evening run starts the backup |
 | `dot_local/bin/executable_agentdb-mcp`, `dot_local/bin/executable_is-work.tmpl` | `~/.local/bin/agentdb-mcp`: starts agentdb's MCP server on the work or personal database (see Claude Code). `~/.local/bin/is-work [folder]`: exits 0 when a folder is work (git's identity there, or inside a work folder); agentdb, the journal and Claude's choice of vault all use it |
 | `dot_local/bin/executable_claude-agents` | `~/.local/bin/claude-agents`: Claude Code's SessionStart hook that shows you the custom agents a session can use (see Claude Code) |
 | `dot_local/bin/executable_tmux-pick` | Ghostty + tmux machines only. `~/.local/bin/tmux-pick`: lists tmux sessions, most recent first, to attach to or start a new one; starts one straight away if there are none. Esc or leaving tmux drops to a plain shell |
@@ -423,6 +436,7 @@ it runs `claude`: in a shell, through its shims (the evening journal) or with
 | Rex (Rex machines) | Rex's `rex` skill (`dot_config/claude/skills/rex/`, the stub `rex skill setup` writes; it reads its guide from the installed `rex`) and its SessionStart hook (`modify_settings.json`), which tells Rex which session Claude runs in. Rex adds both itself at first launch; they're in the repo so applying doesn't remove them. |
 | Agent list at session start | `~/.local/bin/claude-agents`, a SessionStart hook (`modify_settings.json`, every machine) on startup, `/resume` and `/clear`. It shows you, not Claude, the custom agents the session can use, as `SessionStart:startup says: User agents: ...`: user agents from `~/.config/claude/agents/` and project agents from every `.claude/agents/` between the session's folder and its repo root, each with its name and the first sentence of its description. It follows symlinks, skips broken links and files without a name and description, and lists an agent once where Claude Code would use only one (the closest project agent; a project agent over a user one of the same name). It reads the files at each start, so it lists agents this repo doesn't manage too, and prints nothing when there are none. Built-in agents aren't listed. |
 | Agent: cradle-maintainer | `dot_config/claude/agents/cradle-maintainer.md.tmpl`, the expert on this repo. Every session hands it setup changes and questions, from any folder. It reads this README and CLAUDE.md before each task rather than repeating them, so it can't drift from them. It has both agentdb databases as its own servers (`agentdb-personal`, `agentdb-work`), so it learns from work and personal lessons wherever it's started. It edits, updates the docs and runs `scripts/check`, then stops and returns a summary of `chezmoi diff`; the session runs `chezmoi apply` (your OK) and messages it back to check the result, commit and push. Opus. |
+| Work extras (private) | Work skills, agents and settings that must never be public live in `~/.config/claude/work`, a private repo on the work host (chezmoi's work extras question), never in this repo. `run_after_46-claude-work.sh.tmpl` links each `skills/<name>/` and `agents/<name>.md` there into Claude's config on every apply and removes links whose target is gone; it never replaces a real file. `modify_settings.json` adds the `permissions.deny` and `allow` from its `settings.json`. The journal follows its `journal.md`, and the evening run also allows the tools listed in its `journal-tools`. `vault-sync` clones it on a new machine and backs it up every evening. Its own README says what's in it. |
 | Skills from GitHub | Add an entry to `.chezmoiexternal.toml`, pinned to a commit, with a link to the skill's history so updates can be checked by hand. Your own skills go in `dot_config/claude/skills/<name>/SKILL.md`. |
 | MCP servers (user scope) | Claude Code stores these in its own state file, so they're registered by `run_onchange_after_45-claude-mcp.sh.tmpl`: add an `add <name> '<json>'` line there and the server's tool to mise. It replaces a server of the same name; removing a line doesn't unregister it (`claude mcp remove --scope user <name>`). |
 | MCP server: agentdb | [AgentDB](https://github.com/ruvnet/agentdb) (`npm:agentdb` in mise), vector memory with reflexion, skills and a causal graph as MCP tools. Work and personal memories are separate databases in `~/.local/share/agentdb/`: `~/.local/bin/agentdb-mcp` starts the server in the session's folder and uses `work.db` when `is-work` says it's work: git's identity there is the work one (the same remote rules as commits) or the folder is inside one of the work folders chezmoi asked for (in git or not), otherwise `personal.db`. Without a work identity everything is personal. To change the work folders, edit `workFolders` (full paths, `;` between them) in `~/.config/chezmoi/chezmoi.toml` and `chezmoi apply`. The global instructions tell Claude to search it before real tasks and store what it learned after (`reflexion_retrieve`, `reflexion_store`); nothing is stored automatically. A session keeps the database it started with, so start Claude in the repo, not in a parent folder of work and personal repos. `agentdb-mcp work` or `agentdb-mcp personal` picks one outright. cradle is the one exception to the split: sessions started in it also get `agentdb-work` (registered at local scope for this folder, on machines with a work identity), and `cradle-maintainer` has both, so setup work learns from every lesson. `/mcp` in Claude Code shows whether it's connected. |
@@ -437,15 +451,26 @@ so a new machine gets them as soon as you sign in to Claude Code with that
 account; a missing connector only turns its feature off. Three things to
 know:
 
+- Headless runs (`claude -p`, like the evening journal) load them too
+  (2.1.314 didn't; 2.1.323 does, checked 2026-11-23 from a terminal), but
+  can only use the tools they're allowed. The evening journal is allowed
+  read tools only: Slack's, Google Calendar's (list, get and search
+  events), Drive's and Docs' for attached meeting notes, and whatever the
+  work extras' `journal-tools` lists (checked headless 2026-11-23). The
+  next session you open still fills in whatever it couldn't reach.
 - Some arrive under another name: Slack can come as the Slack plugin
   (`mcp__plugin_slack_slack__*`) instead of the connector
   (`mcp__claude_ai_Slack__*`), so what uses Slack accepts both.
+- They belong to the claude.ai account, not to a folder, so they don't follow
+  the work/personal split: every session, in any repo, sees the same Google
+  and Slack accounts.
 - What a connector may do (read only, or also write) is set when you connect
   it, and may be limited by a claude.ai organisation admin or by the service's
   own admin.
 
 | Connector | Access needed | What in cradle depends on it |
 |---|---|---|
+| Slack | read | The journal's `## Slack` section (conversations you were in, mentions, DMs). |
 | Google Calendar | read | The journal's `## Meetings` section (the evening run and the start-of-session catch-up) and `/journal agenda` (today's meetings as headings to take notes under). |
 | Google Drive | read and write | Searching Drive from Claude, and meeting notes docs attached to calendar events, which the journal reads. Write access lets Claude create files. |
 | Google Docs | read and write | Creating and editing Docs from Claude, and reading meeting notes for the journal. |
@@ -487,6 +512,31 @@ or MCP server:
 - Daily notes are configured from `obsidian/` in this repo: today's is
   `Daily/YYYY-MM-DD.md` and starts from `Templates/Daily.md` (a `date`
   property and `## Notes`, `## Meetings`, `## Terminal`, `## Slack`).
+- **The daily notes archive:** only today's note stays at the top of
+  `Daily/`. `daily-archive` moves each earlier one into a folder per month
+  and week, `Daily/YYYY-MM MMMM/Week N/` (e.g.
+  `Daily/2026-11 November/Week 4/2026-11-24.md`): Week 1 is days 1–7,
+  Week 2 days 8–14, Week 3 days 15–21 and Week 4 the 22nd to the month's
+  end, so every month has four week folders. It runs every morning at
+  04:00 (on waking, if the Mac was asleep) from a LaunchAgent, and again at
+  the start of `/journal agenda`, so a morning the Mac was off is still
+  covered; never in the evening run, when the note is still today's. It
+  moves only files named like a date, never overwrites or deletes: if the
+  archive already has a note for that day (say Obsidian made a new empty
+  one when you opened a past day from its top-level name), it leaves both
+  and says so, for you to merge. Then it backs up the vaults with
+  `vault-sync`. Links like `[[2026-11-23]]` still work, since Obsidian
+  finds notes by name. The journal looks for a past day's note in the
+  archive first, and creates a missing past day's note straight in its
+  archive folder.
+  `Templates/Meeting.md` starts a meeting's notes: `### HH:MM` with the
+  current time. Give "Templates: Insert template" a hotkey in Obsidian
+  (Settings → Hotkeys), then it's the hotkey, "Mee", Enter. A
+  `run_onchange` script merges the settings into the work vault's `.obsidian/` files, keeping anything else set in
+  Obsidian, and writes the templates; edit them here, not in Obsidian, since
+  the next apply overwrites them. If the vault hasn't been opened in
+  Obsidian yet, it waits, and the first apply after opening it writes them.
+  Obsidian picks up the settings when it next opens the vault.
 - **Meeting notes during the day:** `/journal agenda` (or "add today's
   meetings") first archives the past daily notes (above), then puts today's
   Google Calendar events into `## Meetings` as
@@ -506,6 +556,24 @@ or MCP server:
   sections, except Meetings, where it merges and keeps your notes. Meetings
   and Slack come from [claude.ai connectors](#claudeai-connectors); a source
   with nothing that day gets `- Nothing.`
+- A LaunchAgent runs it every evening at 18:00 (on waking, if the Mac was
+  asleep), only if there were work sessions or commits that day, then runs
+  `vault-sync` either way. Log:
+  `~/Library/Logs/obsidian-journal.log`. That run is headless and is
+  allowed only read tools (Slack under either name, Google Calendar,
+  Drive and Docs for attached notes, and the work extras' tools; see
+  [claude.ai connectors](#claudeai-connectors)), so it writes every
+  section. It needs Full Disk Access for Homebrew's bash (Getting started,
+  After bootstrap); without it, the log says so instead of "Nothing
+  happened today", and the next session tells you and writes that day's
+  summary. For whatever else it couldn't write, a hook (`journal-check`, run when Claude starts and on
+  each message, checking once a day) looks at the last weekday's note; if its Meetings section isn't
+  summarised yet (marked `%% journal %%`, hidden in reading view) or its
+  Slack section is empty, Claude says in one line that it's catching up and
+  fills them in, without asking, then backs up the vaults. The same hook
+  adds today's agenda the same way.
+- **Work steps:** the journal also follows the private work extras'
+  `journal.md` (see Claude Code), which can add sections of its own.
 - `journal-data [YYYY-MM-DD]` prints what the summary is built from: your
   prompts and Claude's replies (shortened) in work sessions and your commits
   in work git repos up to four folders below home, judged by `is-work`. Shell history is not used.

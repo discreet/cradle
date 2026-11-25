@@ -5,6 +5,7 @@
 {{- $workHost := "" -}}
 {{- $workOrgs := "" -}}
 {{- $workFolders := "" -}}
+{{- $workClaudeRepo := "" -}}
 {{- if $workEmail -}}
 {{-   $workHost = promptStringOnce . "workHost" "Work git host such as gitlab.com or git.example.com" -}}
 {{-   $workOrgs = promptStringOnce . "workOrgs" "Work orgs/groups/accounts exactly as in repo URLs; your work account's own too if it has repos (space-separated; blank if every repo on that host is work)" -}}
@@ -19,6 +20,7 @@
 {{-     end -}}
 {{-   end -}}
 {{-   $workFolders = join ";" $folders -}}
+{{-   $workClaudeRepo = promptStringOnce . "workClaudeRepo" "Private git repo on the work host for Claude Code's work skills, agents and settings (SSH URL; blank for none)" -}}
 {{-   if not $workHost -}}
 {{-     fail "A work email needs a work git host." -}}
 {{-   end -}}
@@ -70,6 +72,7 @@ sourceDir = {{ .chezmoi.sourceDir | quote }}
   personalVaultPrivate = {{ $personalVaultPrivate | quote }}
   workVaultRepo = {{ $workVaultRepo | quote }}
   personalVaultRepo = {{ $personalVaultRepo | quote }}
+  workClaudeRepo = {{ $workClaudeRepo | quote }}
   terminal = {{ $terminal | quote }}
 
 [edit]

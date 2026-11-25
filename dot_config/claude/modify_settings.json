@@ -12,10 +12,23 @@
 {{- /*
   Both Obsidian vaults are working folders in every session; Claude's file
   tools can't read or edit the folders named as private in either (added to
+  the managed deny list). With a
   work vault, each session start and each prompt checks for today's agenda
   and missing Meetings or Slack summaries (journal-check; once a day, so
   later prompts cost nothing).
 */ -}}
+{{- /*
+  Private work extras (~/.config/claude/work, see run_after_46-claude-work):
+  its settings.json's permissions.deny and permissions.allow are added.
+*/ -}}
+{{- $extraAllow := list -}}
+{{- $workSettings := joinPath .chezmoi.homeDir ".config/claude/work/settings.json" -}}
+{{- if stat $workSettings -}}
+{{-   $work := include $workSettings | fromJson -}}
+{{-   $perms := get $work "permissions" | default dict -}}
+{{-   $_ := set $managed.permissions "deny" (concat $managed.permissions.deny (get $perms "deny" | default list)) -}}
+{{-   $extraAllow = get $perms "allow" | default list -}}
+{{- end -}}
 {{- $vaults := list -}}
 {{- $deny := list -}}
 {{- range list (list .workVault .workVaultPrivate) (list .personalVault .personalVaultPrivate) -}}
@@ -38,12 +51,15 @@
 {{-   $_ := set $managed.permissions "deny" (concat $managed.permissions.deny $deny) -}}
 {{- end -}}
 {{- /* vault-sync runs without asking (the journal runs it), added to the user's own allow list. */ -}}
-{{- if or .workVaultRepo .personalVaultRepo -}}
+{{- if or .workVaultRepo .personalVaultRepo .workClaudeRepo -}}
+{{-   $extraAllow = append $extraAllow "Bash(vault-sync)" -}}
+{{- end -}}
+{{- if $extraAllow -}}
 {{-   $allow := list -}}
 {{-   if hasKey $live "permissions" -}}
 {{-     $allow = get $live.permissions "allow" | default list -}}
 {{-   end -}}
-{{-   $_ := set $managed.permissions "allow" (append $allow "Bash(vault-sync)" | uniq) -}}
+{{-   $_ := set $managed.permissions "allow" (concat $allow $extraAllow | uniq) -}}
 {{- end -}}
 {{- $hooks := dict -}}
 {{- if .workVault -}}

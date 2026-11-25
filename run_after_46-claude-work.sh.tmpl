@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Links Claude Code's private work extras into its config on every apply, so
+# new ones show up: each skills/<name>/ and agents/<name>.md in
+# ~/.config/claude/work (the workClaudeRepo repo, cloned and backed up by
+# vault-sync; its settings.json is merged by modify_settings.json). Links
+# into it whose target is gone are removed. A real file or folder already at
+# a link's place is left alone and reported.
+set -euo pipefail
+
+config={{ joinPath .chezmoi.homeDir ".config/claude" | quote }}
+work=$config/work
+
+link() { # link <source> <target>
+  if [[ -L $2 ]]; then
+    [[ $(readlink "$2") != "$1" ]] || return 0
+    rm "$2"
+  elif [[ -e $2 ]]; then
+    echo "claude-work: $2 isn't a link; left as it is (remove it to use $1)" >&2
+    return 0
+  fi
+  ln -s "$1" "$2"
+}
+
+if [[ -d $work ]]; then
+  mkdir -p "$config/skills" "$config/agents"
+  for d in "$work"/skills/*/; do
+    [[ ! -d $d ]] || link "${d%/}" "$config/skills/$(basename "$d")"
+  done
+  for f in "$work"/agents/*.md; do
+    [[ ! -f $f ]] || link "$f" "$config/agents/$(basename "$f")"
+  done
+fi
+for l in "$config"/skills/* "$config"/agents/*; do
+  if [[ -L $l && $(readlink "$l") == "$work"/* && ! -e $l ]]; then rm "$l"; fi
+done
