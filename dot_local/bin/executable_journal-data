@@ -4,8 +4,11 @@
 # shortened) and the user's commits in the work git repos under the home
 # folder. is-work decides what's work; personal activity is left out.
 # Usage: journal-data [YYYY-MM-DD]  (default: today). Exits 2, after
-# is-work's message, when macOS denies access to a work folder.
+# is-work's message, when macOS denies access to a work folder, and 1 when jq
+# is missing or fails, so a broken run isn't mistaken for a quiet day.
 set -euo pipefail
+
+command -v jq >/dev/null || { echo "journal-data: jq not found" >&2; exit 1; }
 
 day=${1:-$(date +%F)}
 from=$(date -j -f '%Y-%m-%d %H:%M:%S' "$day 00:00:00" +%s)
@@ -21,15 +24,21 @@ skip="${XDG_STATE_HOME:-$HOME/.local/state}/cradle/journal"
 echo "# Claude Code sessions on $day"
 cwds=()
 while IFS= read -r f; do
-  lines=$(jq -r --arg s "$start" --arg e "$end" --arg skip "$skip" '
+  [[ -r $f ]] || continue # removed since find listed it
+  # Line by line (-R, fromjson?), so a malformed line, like one cut off
+  # mid-write, is skipped alone; any other jq failure stops the run. The
+  # folder is taken before descending into a reply, whose parts have no cwd.
+  lines=$(jq -rR --arg s "$start" --arg e "$end" --arg skip "$skip" '
+    fromjson? | objects |
     select(.timestamp? and .timestamp >= $s and .timestamp < $e and .cwd != $skip) |
-    if .type == "user" and (.message.content | type) == "string"
+    .cwd as $c |
+    if .type == "user" and (.message.content? | type) == "string"
       and (.message.content | startswith("<") | not) then
-      "\(.cwd)\tuser: \(.message.content[:400] | gsub("\\s+"; " "))"
+      "\($c)\tuser: \(.message.content[:400] | gsub("\\s+"; " "))"
     elif .type == "assistant" then
-      .message.content[]? | select(.type == "text") |
-      "\(.cwd)\tclaude: \(.text[:400] | gsub("\\s+"; " "))"
-    else empty end' "$f" 2>/dev/null) || continue
+      .message.content[]? | select(.type? == "text" and (.text | type) == "string") |
+      "\($c)\tclaude: \(.text[:400] | gsub("\\s+"; " "))"
+    else empty end' "$f") || { echo "journal-data: jq failed on $f" >&2; exit 1; }
   [[ -n $lines ]] || continue
   cwd=$(head -n1 <<<"$lines" | cut -f1)
   "$is_work" "$cwd" || { (($? == 2)) && exit 2; continue; }

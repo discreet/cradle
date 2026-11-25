@@ -509,6 +509,9 @@ or MCP server:
 - `journal-data [YYYY-MM-DD]` prints what the summary is built from: your
   prompts and Claude's replies (shortened) in work sessions and your commits
   in work git repos up to four folders below home, judged by `is-work`. Shell history is not used.
+  It skips a malformed session line but fails if jq is missing or fails,
+  so the evening log says "journal-data failed" instead of "Nothing
+  happened today".
 
 ## What changed from the old setup
 

@@ -351,7 +351,7 @@ journal_check() { # catches up the last weekday's missing summaries and adds tod
   rm -rf "$st"
 }
 journal_data() { # today's work sessions and commits only, without the evening run's own
-  local j=$tmp/journal today now yesterday out
+  local j=$tmp/journal today now yesterday out status
   today=$(date +%F)
   now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   yesterday=$(date -u -v-1d +%Y-%m-%dT%H:%M:%SZ)
@@ -361,7 +361,13 @@ journal_data() { # today's work sessions and commits only, without the evening r
     echo "{\"type\":\"assistant\",\"timestamp\":\"$now\",\"cwd\":\"$j/home/code/app\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"Added the login page.\"}]}}"
     echo "{\"type\":\"user\",\"timestamp\":\"$yesterday\",\"cwd\":\"$j/home/code/app\",\"message\":{\"content\":\"from yesterday\"}}"
     echo "{\"type\":\"user\",\"timestamp\":\"$now\",\"cwd\":\"$j/home/code/app\",\"message\":{\"content\":\"<system-reminder>noise\"}}"
+    echo "{\"type\":\"user\",\"timestamp\":\"$now\",\"cwd\":\"$j/home/code/app\",\"message\":{\"content\":\"cut off" # skipped alone
   } >"$j/claude/projects/p/a.jsonl"
+  # A session from yesterday whose first line today is Claude's reply keeps its folder.
+  {
+    echo "{\"type\":\"user\",\"timestamp\":\"$yesterday\",\"cwd\":\"$j/home/code/app\",\"message\":{\"content\":\"from yesterday\"}}"
+    echo "{\"type\":\"assistant\",\"timestamp\":\"$now\",\"cwd\":\"$j/home/code/app\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"Done after midnight.\"}]}}"
+  } >"$j/claude/projects/p/d.jsonl"
   echo "{\"type\":\"user\",\"timestamp\":\"$now\",\"cwd\":\"$j/home/.local/state/cradle/journal\",\"message\":{\"content\":\"the evening run\"}}" \
     >"$j/claude/projects/p/b.jsonl"
   echo "{\"type\":\"user\",\"timestamp\":\"$now\",\"cwd\":\"$j/home/code/mine\",\"message\":{\"content\":\"a personal thing\"}}" \
@@ -389,11 +395,17 @@ journal_data() { # today's work sessions and commits only, without the evening r
   chmod 755 "$j/home/locked"
   if ! grep -q '^user: add a login page$' <<<"$out" ||
     ! grep -q '^claude: Added the login page.$' <<<"$out" ||
+    ! grep -q '^claude: Done after midnight.$' <<<"$out" ||
     ! grep -q ' feat: login page$' <<<"$out" ||
     grep -qe 'from yesterday' -e 'noise' -e 'evening run' -e 'personal' -e 'Vault backup' <<<"$out"; then
     echo "$out"
     return 1
   fi
+  # A failing jq is an error (1), not a quiet day or no access (2).
+  mkdir -p "$j/bin" && printf '#!/bin/sh\nexit 3\n' >"$j/bin/jq" && chmod +x "$j/bin/jq"
+  (cd "$j" && HOME=$j/home CLAUDE_CONFIG_DIR=$j/claude XDG_STATE_HOME=$j/home/.local/state PATH=$j/bin:$PATH \
+    "$home/.local/bin/journal-data" "$today" >/dev/null 2>&1) && status=0 || status=$?
+  ((status == 1)) || { echo "exit $status with a failing jq"; return 1; }
 }
 daily_archive() { # moves past daily notes into month/week folders; today's, others' and taken paths stay
   local d=$tmp/archive bin=$tmp/archive/bin v=$vault/Daily today tomorrow out status f
