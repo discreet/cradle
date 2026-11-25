@@ -16,6 +16,22 @@ globally with `brew install`, `npm install -g`, `pip install`, `uv tool
 install` or `go install`; they belong in the repo's mise config or Brewfile.
 Project dependencies inside a project are fine.
 
+# Decisions and rules
+
+When the user sets a rule, a parameter or a decision that should outlast the
+session (how something must be built, kept or shared, what's off limits), or
+Claude learns one that isn't written down, record it right away, without
+being asked, where later sessions will look:
+
+- this machine's setup, or anything Claude builds for the user across
+  projects (agents, skills, hooks): cradle's CLAUDE.md, through
+  `cradle-maintainer`, in generic words with no private names;
+- one repo: its CLAUDE.md, or a file kept out of git (`CLAUDE.local.md`,
+  listed in `.git/info/exclude`) when the user doesn't want it shared.
+
+Before answering about or changing something Claude built earlier, read
+those first. agentdb is for lessons, not rules.
+
 # Memory (agentdb)
 
 The `agentdb` MCP server is a memory of past work that lasts between

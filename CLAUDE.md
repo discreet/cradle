@@ -211,6 +211,17 @@ are listed so they aren't proposed again without a reason.
   `StrictHostKeyChecking accept-new`, keepalives and `ControlMaster` were
   declined.
 - **Docker:** Colima from mise, started by a LaunchAgent, default VM size.
+- **Work agents are the user's alone** (rule set when they were created,
+  recorded 2026-11-25): the specialized agents Claude builds for work repos
+  are for the user's use only. They are never committed to the work repo,
+  pushed or shared: each repo keeps `/.claude/agents/` out of git in
+  `.git/info/exclude`, never in a tracked `.gitignore`. A repo's own
+  `.claude/skills/` may be tracked; that's the repo's call. Keep that rule for
+  every new one. Today they live only on this disk, linked into
+  `~/.config/claude/agents/` by hand, with no backup: an open problem. A
+  private home that is backed up (its own private repo on the work host,
+  cloned and linked by cradle through a chezmoi question, or a hidden
+  folder in the work vault) is proposed, not yet chosen.
 - **Apps:** Homebrew installs only Obsidian, plus Ghostty on Ghostty
   machines. Firefox and Slack were removed on 2026-11-20 (Slack is still
   used through its claude.ai connector). The Slack app comes pre-installed
