@@ -39,7 +39,7 @@ nvim_bin=$(mise which nvim 2>/dev/null || command -v nvim)
 # Rendered three times: work on github.com beside personal, under two orgs,
 # with both Obsidian vaults (most checks use this one); work on its own host,
 # with no vaults, on Rex; and no work identity, with only a personal vault.
-setup() { # setup <name> <work email> <work host> <work orgs> [work vault] [its private folders] [work folders] [personal vault] [its private folders] [work vault repo] [personal vault repo] [terminal] [work Claude repo]
+setup() { # setup <name> <work email> <work host> <work orgs> [work vault] [its private folders] [work folders] [personal vault] [its private folders] [work vault repo] [personal vault repo] [terminal] [private-cradle repo]
   mkdir -p "$tmp/$1"
   cat >"$tmp/$1.toml" <<EOF
 sourceDir = "$repo"
@@ -57,13 +57,13 @@ sourceDir = "$repo"
   workVaultRepo = "${10:-}"
   personalVaultRepo = "${11:-}"
   terminal = "${12:-ghostty}"
-  workClaudeRepo = "${13:-}"
+  privateCradleRepo = "${13:-}"
 EOF
 }
 vault=$tmp/vault pvault=$tmp/personal-vault remotes=$tmp/remotes
 setup home work@example.com github.com "Example-Org other-org" "$vault" "Team Stuff; Private/HR/" \
   "$tmp/work;$tmp/clients b" "$pvault" "Diary/" "$remotes/work.git" "$remotes/personal.git"
-setup home-selfhosted work@example.com git.example.com "" "" "" "" "" "" "" "" rex "$remotes/claude-work.git"
+setup home-selfhosted work@example.com git.example.com "" "" "" "" "" "" "" "" rex "$remotes/private-cradle.git"
 setup home-personal "" "" "" "" "" "" "$pvault" "" "" "$remotes/personal.git"
 home2=$tmp/home-personal
 home3=$tmp/home-selfhosted
@@ -200,7 +200,7 @@ personal_vault_only() { # no journal, hooks or daily notes; the vault is still C
 }
 no_obsidian() {
   local h=$tmp/home-selfhosted bad=0 f
-  # vault-sync and its agent are there only for the work extras' backup (work_extras_backup).
+  # vault-sync and its agent are there only for private-cradle's backup (private_cradle_backup).
   for f in .local/bin/journal-data .local/bin/daily-archive Library/LaunchAgents/local.daily-archive.plist; do
     [[ ! -e $h/$f ]] || { echo "installed without a vault: $f"; bad=1; }
   done
@@ -214,35 +214,35 @@ no_obsidian() {
     "$h/.config/claude/settings.json" >/dev/null || { echo "no Rex hook with Rex"; bad=1; }
   return "$bad"
 }
-work_extras_settings() { # the private work extras' settings.json adds its deny and allow rules
+private_cradle_settings() { # private-cradle's settings.json adds its deny and allow rules
   local m=$tmp/extras live out
   live=$m/.config/claude/settings.json
-  mkdir -p "$m/.config/claude/work"
+  mkdir -p "$m/.config/private-cradle/claude" "${live%/*}"
   echo '{"permissions":{"allow":["Bash(ls *)"]}}' >"$live"
-  echo '{"permissions":{"deny":["mcp__example__write"],"allow":["mcp__example__read"]}}' >"$m/.config/claude/work/settings.json"
+  echo '{"permissions":{"deny":["mcp__example__write"],"allow":["mcp__example__read"]}}' >"$m/.config/private-cradle/claude/settings.json"
   out=$(HOME=$m chezmoi --config "$tmp/home.toml" --persistent-state "$tmp/extras.boltdb" cat "$live") || return 1
   jq -e '(.permissions.deny | index("mcp__example__write") != null)
     and .permissions.allow == ["Bash(ls *)", "mcp__example__read", "Bash(vault-sync)"]' <<<"$out" >/dev/null ||
     { echo "$out" | jq .permissions; return 1; }
 }
-work_extras_links() { # skills and agents in the work extras are linked; stale links go, real files stay
-  local m=$tmp/links c script
-  c=$m/.config/claude
-  mkdir -p "$c/work/skills/one" "$c/work/agents" "$c/skills/mine" "$c/agents"
-  echo x >"$c/work/skills/one/SKILL.md"; echo x >"$c/work/agents/a.md"
-  mkdir -p "$c/work/skills/mine"; echo x >"$c/work/skills/mine/SKILL.md"
-  ln -s "$c/work/skills/gone" "$c/skills/gone"
+private_cradle_links() { # skills and agents in private-cradle are linked; stale links go, real files stay
+  local m=$tmp/links c w script
+  c=$m/.config/claude w=$m/.config/private-cradle/claude
+  mkdir -p "$w/skills/one" "$w/agents" "$c/skills/mine" "$c/agents"
+  echo x >"$w/skills/one/SKILL.md"; echo x >"$w/agents/a.md"
+  mkdir -p "$w/skills/mine"; echo x >"$w/skills/mine/SKILL.md"
+  ln -s "$w/skills/gone" "$c/skills/gone"
   ln -s /elsewhere/b.md "$c/agents/b.md"
   script=$(HOME=$m chezmoi --config "$tmp/home.toml" --persistent-state "$tmp/links.boltdb" \
-    execute-template <"$repo/run_after_46-claude-work.sh.tmpl") || return 1
+    execute-template <"$repo/run_after_46-private-cradle.sh.tmpl") || return 1
   HOME=$m bash -c "$script" 2>/dev/null || return 1
-  [[ $(readlink "$c/skills/one") == "$c/work/skills/one" && $(readlink "$c/agents/a.md") == "$c/work/agents/a.md" ]] ||
+  [[ $(readlink "$c/skills/one") == "$w/skills/one" && $(readlink "$c/agents/a.md") == "$w/agents/a.md" ]] ||
     { echo "not linked"; ls -l "$c/skills" "$c/agents"; return 1; }
   [[ ! -L $c/skills/gone && -d $c/skills/mine && ! -L $c/skills/mine && -L $c/agents/b.md ]] ||
     { echo "stale link kept, real folder replaced or another link removed"; ls -l "$c/skills" "$c/agents"; return 1; }
 }
-work_extras_backup() { # vault-sync backs up the work extras when their repo is set, and only then
-  grep -qF "sync \"$home3/.config/claude/work\" \"$remotes/claude-work.git\"" "$home3/.local/bin/vault-sync" ||
+private_cradle_backup() { # vault-sync backs up private-cradle when its repo is set, and only then
+  grep -qF "sync \"$home3/.config/private-cradle\" \"$remotes/private-cradle.git\"" "$home3/.local/bin/vault-sync" ||
     { echo "no backup line"; grep '^sync' "$home3/.local/bin/vault-sync"; return 1; }
   # No work vault there, so vault-sync has its own evening agent.
   [[ -e $home3/Library/LaunchAgents/local.vault-sync.plist ]] || { echo "no evening backup agent"; return 1; }
@@ -527,8 +527,8 @@ evening_run() { # the journal (only when there's work to journal), then the back
   # shellcheck disable=SC2016
   printf '#!/bin/sh\n[ -n "$NOACCESS" ] && exit 2\n[ -n "$WORK" ] && echo "## ~/code"\nexit 0\n' >"$e/.local/bin/journal-data"
   chmod +x "$e"/.local/bin/* "$e/.local/share/mise/shims/claude"
-  mkdir -p "$e/.config/claude/work"
-  printf '%s\n' '# a comment' '' mcp__example__read_thing 'Bash(git -C * diff -- Example/)' >"$e/.config/claude/work/journal-tools"
+  mkdir -p "$e/.config/private-cradle/claude"
+  printf '%s\n' '# a comment' '' mcp__example__read_thing 'Bash(git -C * diff -- Example/)' >"$e/.config/private-cradle/claude/journal-tools"
   HOME=$e XDG_STATE_HOME=$e/state "$home/.local/bin/obsidian-journal" >/dev/null || return 1
   [[ $(cat "$log") == vault-sync ]] || { echo "quiet day:"; cat "$log"; return 1; }
   rm "$log"
@@ -536,7 +536,7 @@ evening_run() { # the journal (only when there's work to journal), then the back
   [[ $(head -1 "$log") == claude*"Don't run vault-sync"* && $(sed -n 2p "$log") == vault-sync ]] ||
     { echo "work day:"; cat "$log"; return 1; }
   # Read-only connector tools only: Slack under both names, Calendar, Drive and Docs,
-  # plus the work extras' journal-tools (comments and blank lines skipped).
+  # plus private-cradle's journal-tools (comments and blank lines skipped).
   local t
   for t in mcp__claude_ai_Slack__slack_search_public_and_private mcp__plugin_slack_slack__slack_read_thread \
     mcp__claude_ai_Google_Calendar__list_events mcp__claude_ai_Google_Docs__read_doc \
@@ -732,9 +732,9 @@ for f in "$home"/Library/LaunchAgents/*.plist; do
 done
 check "Claude settings merge over a live file" claude_merge
 check "Claude: session start lists user and project agents" claude_agents
-check "Claude: the work extras' settings add their deny and allow rules" work_extras_settings
-check "Claude: the work extras' skills and agents are linked, stale links removed" work_extras_links
-check "Claude: vault-sync backs up the work extras with their repo" work_extras_backup
+check "Claude: private-cradle's settings add their deny and allow rules" private_cradle_settings
+check "Claude: private-cradle's skills and agents are linked, stale links removed" private_cradle_links
+check "Claude: vault-sync backs up private-cradle with its repo" private_cradle_backup
 check "is-work: work by git identity or work folder, else personal" is_work
 check "Obsidian: both vaults open, private folders blocked" obsidian_settings
 check "Obsidian: global instructions name both vaults and private folders" obsidian_instructions

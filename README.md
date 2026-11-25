@@ -50,9 +50,10 @@ run, and a few steps only you can do afterwards.
   org or under your work account (then give that account's name as a work
   org too), so it's committed and pushed as work. Skip a repo to leave that
   vault without a backup.
-- **A private repo for Claude Code's work extras** (optional, with a work
-  identity): your work skills, agents and settings that must stay private,
-  on the work host like the work vault's repo. Give its SSH URL, or leave it
+- **A private repo for private-cradle** (optional, with a work identity):
+  the private side of this repo, for anything about the setup that can't be
+  public, like your work skills, agents and settings. It goes under your
+  work account, like the work vault's repo. Give its SSH URL, or leave it
   blank (see Claude Code).
 - **claude.ai account** for Claude Code, with its connectors connected at
   claude.ai → Settings → Connectors (see [claude.ai connectors](#claudeai-connectors)):
@@ -83,7 +84,7 @@ other questions only when you give the vault.
 | Personal vault folders Claude must not read | As above |
 | Private git repo for the personal vault | Its SSH URL |
 | Terminal | `ghostty` (Ghostty with tmux) or `rex` (Rex, installed by hand) |
-| Private git repo for Claude Code's work extras | Its SSH URL, or blank (asked with a work identity) |
+| Private git repo for private-cradle | Its SSH URL, or blank (asked with a work identity) |
 
 ### Run bootstrap
 
@@ -135,8 +136,8 @@ versions in `lazy-lock.json`. It ends by listing the steps below.
    trust it when asked; Claude Code runs no hooks (the journal's) until you do.
 4. **Fetch the vaults:** `vault-sync`, once the keys are on their accounts. It
    clones each vault from its backup repo, or makes the first backup if the
-   repo is empty, and clones Claude Code's work extras; then `chezmoi apply`
-   links their skills and agents.
+   repo is empty, and clones private-cradle; then `chezmoi apply` links
+   its Claude Code skills and agents.
 5. **Open the vaults in Obsidian:** "Open folder as vault" for each vault
    folder. Then run `chezmoi apply` once, so the work vault gets its Daily
    notes settings and templates. Optionally, give "Templates: Insert
@@ -410,7 +411,7 @@ the `superlogical` MCP server.
 | `dot_config/tmux/tmux.conf`, `dot_config/mise/conf.d/tmux.toml` | tmux (prefix `C-Space`; the built-in keys it relies on are listed at the top) and its install. Ghostty + tmux machines only |
 | `dot_config/ghostty/config` | Ghostty (Gruvbox dark). Its first window at launch runs `tmux-pick`. Ghostty + tmux machines only |
 | `dot_config/rex/init.lua` | Rex's keys (`tmux.conf`'s, on the same `C-Space` prefix), actions and hosts; loads the unmanaged `local.lua` beside it. Rex machines only, with the Gruvbox Dark theme file from `.chezmoiexternal.toml` |
-| `dot_local/bin/executable_vault-sync.tmpl`, `private_Library/LaunchAgents/local.vault-sync.plist.tmpl` | Backs up each Obsidian vault to its private git repo (see Obsidian), and Claude Code's work extras to theirs; installed only when one of those repos is set. The LaunchAgent only without a work vault; with one, the journal's evening run starts the backup |
+| `dot_local/bin/executable_vault-sync.tmpl`, `private_Library/LaunchAgents/local.vault-sync.plist.tmpl` | Backs up each Obsidian vault to its private git repo (see Obsidian), and private-cradle to theirs; installed only when one of those repos is set. The LaunchAgent only without a work vault; with one, the journal's evening run starts the backup |
 | `dot_local/bin/executable_agentdb-mcp`, `dot_local/bin/executable_is-work.tmpl` | `~/.local/bin/agentdb-mcp`: starts agentdb's MCP server on the work or personal database (see Claude Code). `~/.local/bin/is-work [folder]`: exits 0 when a folder is work (git's identity there, or inside a work folder); agentdb, the journal and Claude's choice of vault all use it |
 | `dot_local/bin/executable_claude-agents` | `~/.local/bin/claude-agents`: Claude Code's SessionStart hook that shows you the custom agents a session can use (see Claude Code) |
 | `dot_local/bin/executable_tmux-pick` | Ghostty + tmux machines only. `~/.local/bin/tmux-pick`: lists tmux sessions, most recent first, to attach to or start a new one; starts one straight away if there are none. Esc or leaving tmux drops to a plain shell |
@@ -436,7 +437,7 @@ it runs `claude`: in a shell, through its shims (the evening journal) or with
 | Rex (Rex machines) | Rex's `rex` skill (`dot_config/claude/skills/rex/`, the stub `rex skill setup` writes; it reads its guide from the installed `rex`) and its SessionStart hook (`modify_settings.json`), which tells Rex which session Claude runs in. Rex adds both itself at first launch; they're in the repo so applying doesn't remove them. |
 | Agent list at session start | `~/.local/bin/claude-agents`, a SessionStart hook (`modify_settings.json`, every machine) on startup, `/resume` and `/clear`. It shows you, not Claude, the custom agents the session can use, as `SessionStart:startup says: User agents: ...`: user agents from `~/.config/claude/agents/` and project agents from every `.claude/agents/` between the session's folder and its repo root, each with its name and the first sentence of its description. It follows symlinks, skips broken links and files without a name and description, and lists an agent once where Claude Code would use only one (the closest project agent; a project agent over a user one of the same name). It reads the files at each start, so it lists agents this repo doesn't manage too, and prints nothing when there are none. Built-in agents aren't listed. |
 | Agent: cradle-maintainer | `dot_config/claude/agents/cradle-maintainer.md.tmpl`, the expert on this repo. Every session hands it setup changes and questions, from any folder. It reads this README and CLAUDE.md before each task rather than repeating them, so it can't drift from them. It has both agentdb databases as its own servers (`agentdb-personal`, `agentdb-work`), so it learns from work and personal lessons wherever it's started. It edits, updates the docs and runs `scripts/check`, then stops and returns a summary of `chezmoi diff`; the session runs `chezmoi apply` (your OK) and messages it back to check the result, commit and push. Opus. |
-| Work extras (private) | Work skills, agents and settings that must never be public live in `~/.config/claude/work`, a private repo on the work host (chezmoi's work extras question), never in this repo. `run_after_46-claude-work.sh.tmpl` links each `skills/<name>/` and `agents/<name>.md` there into Claude's config on every apply and removes links whose target is gone; it never replaces a real file. `modify_settings.json` adds the `permissions.deny` and `allow` from its `settings.json`. The journal follows its `journal.md`, and the evening run also allows the tools listed in its `journal-tools`. `vault-sync` clones it on a new machine and backs it up every evening. Its own README says what's in it. |
+| private-cradle | Anything about this setup that can't be public lives in `~/.config/private-cradle`, a private repo under your work account (chezmoi's `privateCradleRepo` question), never in this repo. Its `claude/` holds work skills, agents and settings. `run_after_46-private-cradle.sh.tmpl` links each `skills/<name>/` and `agents/<name>.md` there into Claude's config on every apply and removes links whose target is gone; it never replaces a real file. `modify_settings.json` adds the `permissions.deny` and `allow` from its `settings.json`. The journal follows its `journal.md`, and the evening run also allows the tools listed in its `journal-tools`. `vault-sync` clones it on a new machine and backs it up every evening. Its own README says what's in it. |
 | Skills from GitHub | Add an entry to `.chezmoiexternal.toml`, pinned to a commit, with a link to the skill's history so updates can be checked by hand. Your own skills go in `dot_config/claude/skills/<name>/SKILL.md`. |
 | MCP servers (user scope) | Claude Code stores these in its own state file, so they're registered by `run_onchange_after_45-claude-mcp.sh.tmpl`: add an `add <name> '<json>'` line there and the server's tool to mise. It replaces a server of the same name; removing a line doesn't unregister it (`claude mcp remove --scope user <name>`). |
 | MCP server: agentdb | [AgentDB](https://github.com/ruvnet/agentdb) (`npm:agentdb` in mise), vector memory with reflexion, skills and a causal graph as MCP tools. Work and personal memories are separate databases in `~/.local/share/agentdb/`: `~/.local/bin/agentdb-mcp` starts the server in the session's folder and uses `work.db` when `is-work` says it's work: git's identity there is the work one (the same remote rules as commits) or the folder is inside one of the work folders chezmoi asked for (in git or not), otherwise `personal.db`. Without a work identity everything is personal. To change the work folders, edit `workFolders` (full paths, `;` between them) in `~/.config/chezmoi/chezmoi.toml` and `chezmoi apply`. The global instructions tell Claude to search it before real tasks and store what it learned after (`reflexion_retrieve`, `reflexion_store`); nothing is stored automatically. A session keeps the database it started with, so start Claude in the repo, not in a parent folder of work and personal repos. `agentdb-mcp work` or `agentdb-mcp personal` picks one outright. cradle is the one exception to the split: sessions started in it also get `agentdb-work` (registered at local scope for this folder, on machines with a work identity), and `cradle-maintainer` has both, so setup work learns from every lesson. `/mcp` in Claude Code shows whether it's connected. |
@@ -456,7 +457,7 @@ know:
   can only use the tools they're allowed. The evening journal is allowed
   read tools only: Slack's, Google Calendar's (list, get and search
   events), Drive's and Docs' for attached meeting notes, and whatever the
-  work extras' `journal-tools` lists (checked headless 2026-11-23). The
+  `journal-tools` in private-cradle lists (checked headless 2026-11-23). The
   next session you open still fills in whatever it couldn't reach.
 - Some arrive under another name: Slack can come as the Slack plugin
   (`mcp__plugin_slack_slack__*`) instead of the connector
@@ -491,9 +492,8 @@ or MCP server:
   them any other way. Neither the vault paths nor the folder names are in
   this repo.
 - **The personal vault** is unstructured and ad hoc: cradle writes nothing
-  to it, with no daily notes, templates or journal. Its `cradle.md` note
-  holds private notes about this setup that every machine needs but this
-  public repo can't hold (Claude reads and adds to it; see Memory).
+  to it, with no daily notes, templates or journal. Private notes about
+  this setup go in private-cradle instead (see Claude Code).
 - **Backups:** Obsidian doesn't sync between machines here; each vault is
   its own private git repo instead (chezmoi asks for the SSH URLs). Create
   them empty first: the personal one on your GitHub account, the work one on
@@ -561,7 +561,7 @@ or MCP server:
   `vault-sync` either way. Log:
   `~/Library/Logs/obsidian-journal.log`. That run is headless and is
   allowed only read tools (Slack under either name, Google Calendar,
-  Drive and Docs for attached notes, and the work extras' tools; see
+  Drive and Docs for attached notes, and private-cradle's tools; see
   [claude.ai connectors](#claudeai-connectors)), so it writes every
   section. It needs Full Disk Access for Homebrew's bash (Getting started,
   After bootstrap); without it, the log says so instead of "Nothing
@@ -572,8 +572,8 @@ or MCP server:
   Slack section is empty, Claude says in one line that it's catching up and
   fills them in, without asking, then backs up the vaults. The same hook
   adds today's agenda the same way.
-- **Work steps:** the journal also follows the private work extras'
-  `journal.md` (see Claude Code), which can add sections of its own.
+- **Work steps:** the journal also follows `journal.md` in private-cradle
+  (see Claude Code), which can add sections of its own.
 - `journal-data [YYYY-MM-DD]` prints what the summary is built from: your
   prompts and Claude's replies (shortened) in work sessions and your commits
   in work git repos up to four folders below home, judged by `is-work`. Shell history is not used.

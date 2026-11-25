@@ -18,11 +18,11 @@
   later prompts cost nothing).
 */ -}}
 {{- /*
-  Private work extras (~/.config/claude/work, see run_after_46-claude-work):
+  private-cradle (~/.config/private-cradle/claude, see run_after_46-private-cradle):
   its settings.json's permissions.deny and permissions.allow are added.
 */ -}}
 {{- $extraAllow := list -}}
-{{- $workSettings := joinPath .chezmoi.homeDir ".config/claude/work/settings.json" -}}
+{{- $workSettings := joinPath .chezmoi.homeDir ".config/private-cradle/claude/settings.json" -}}
 {{- if stat $workSettings -}}
 {{-   $work := include $workSettings | fromJson -}}
 {{-   $perms := get $work "permissions" | default dict -}}
@@ -51,7 +51,7 @@
 {{-   $_ := set $managed.permissions "deny" (concat $managed.permissions.deny $deny) -}}
 {{- end -}}
 {{- /* vault-sync runs without asking (the journal runs it), added to the user's own allow list. */ -}}
-{{- if or .workVaultRepo .personalVaultRepo .workClaudeRepo -}}
+{{- if or .workVaultRepo .personalVaultRepo .privateCradleRepo -}}
 {{-   $extraAllow = append $extraAllow "Bash(vault-sync)" -}}
 {{- end -}}
 {{- if $extraAllow -}}

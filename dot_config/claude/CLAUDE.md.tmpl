@@ -11,6 +11,11 @@ before `chezmoi apply` and returns a summary: show it to the user, run
 `chezmoi apply` (the user's OK), then message the agent back to confirm,
 commit and push. Inside the repo you may also work directly, following its
 CLAUDE.md.
+{{- if .privateCradleRepo }}
+Anything about the setup that can't be public (private notes, work skills,
+agents and settings) lives in private-cradle, `~/.config/private-cradle`,
+never in cradle: read its README when working on cradle, and add there.
+{{- end }}
 Don't edit the managed files in `~` directly, and don't install tools
 globally with `brew install`, `npm install -g`, `pip install`, `uv tool
 install` or `go install`; they belong in the repo's mise config or Brewfile.
@@ -109,8 +114,6 @@ are kept out only by this rule.
 {{- if .personalVault }}
 - The personal vault has no set structure: no daily notes or templates from
   cradle. Follow whatever the user's notes there already do, and keep work
-  content out of it. Its `cradle.md` note holds private notes about the
-  cradle setup (hosts, orgs, quirks) that every machine needs but the public
-  repo can't hold; read it when working on cradle, and add to it there.
+  content out of it.
 {{- end }}
 {{- end }}

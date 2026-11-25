@@ -3,7 +3,7 @@
 # Homebrew's bash, which needs Full Disk Access to read ~/Documents): if
 # anything happened at work today, Claude writes the day's summary into today's
 # daily note with the journal skill (and any work steps it follows from the
-# private work extras); then vault-sync backs up the vaults, so
+# private-cradle, the private side of cradle); then vault-sync backs up the vaults, so
 # the backup includes the summary. Log: ~/Library/Logs/obsidian-journal.log.
 # Without access to the work folders it says so here and leaves a marker
 # (no-access) that journal-check reports in the next Claude Code session.
@@ -39,9 +39,9 @@ elif grep -q '^## ' <<<"$data"; then
   done
   tools+=(mcp__claude_ai_Google_Drive__get_file_metadata mcp__claude_ai_Google_Drive__read_file_content
     mcp__claude_ai_Google_Docs__read_doc)
-  # Plus the tools the private work extras' journal steps need, one per line
+  # Plus the tools private-cradle's journal steps need, one per line
   # (# starts a comment).
-  extra=$HOME/.config/claude/work/journal-tools
+  extra=$HOME/.config/private-cradle/claude/journal-tools
   if [[ -f $extra ]]; then
     while IFS= read -r t; do [[ -z $t || $t == \#* ]] || tools+=("$t"); done <"$extra"
   fi

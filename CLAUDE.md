@@ -53,7 +53,7 @@ that need it. After each change, put anything worth keeping in one place:
 |---|---|
 | Decisions, rules, how to change things | This file and README.md: the only memory every machine gets, through git. Public, so nothing private |
 | Private values that differ per machine (hosts, orgs, paths) | A chezmoi question (`.chezmoi.toml.tmpl`), used through templates |
-| Private notes every machine needs (which hosts or orgs are in use, quirks of the user's accounts) | `cradle.md` in the personal Obsidian vault, backed up and cloned to each machine by `vault-sync` |
+| Anything about cradle that can't be public: private notes every machine needs (which hosts or orgs are in use, quirks of the user's accounts), work skills, agents and settings | private-cradle (`~/.config/private-cradle`, the `privateCradleRepo` repo), cloned and backed up by `vault-sync`; notes in its README |
 | Lessons: what worked or failed and what to do next time | agentdb. Work here learns from both databases: before real work, `reflexion_retrieve` on `agentdb` (personal, this folder's) and `agentdb-work` (work sessions' lessons, connected here on machines with a work identity); `cradle-maintainer` has them as `agentdb-personal` and `agentdb-work`. Store in the personal one, and bring nothing private from a work lesson into the repo: restate it in generic words |
 | Facts about one machine only, or work in progress on it | Claude Code's own project memory, which stays on that machine |
 
@@ -110,7 +110,7 @@ and every tag.
 | A Neovim plugin | `dot_config/nvim/lua/plugins/`; then `chezmoi re-add ~/.config/nvim/lazy-lock.json` after it installs. Its language server goes in mise and `vim.lsp.enable` in `plugins/lsp.lua` |
 | Claude Code settings, plugins, MCP servers | see the Claude Code section of README.md |
 | A Claude Code agent | `dot_config/claude/agents/<name>.md`, only when it needs other tools, model or its own context; know-how alone is a skill. A row in README's Claude Code table. The session-start list (`claude-agents`) finds it by itself |
-| A Claude Code skill | `dot_config/claude/skills/<name>/SKILL.md`, with longer reference notes in files beside it. A skill that needs the work vault goes in `.chezmoiignore`'s `workVault` block and `scripts/check`'s `personal_vault_only` list. A row in README's Layout table. Keep employer detail out: the skill finds it at run time and keeps it in the work vault. A work skill or agent goes in the private work extras, never here; see "Work extras" in Decisions |
+| A Claude Code skill | `dot_config/claude/skills/<name>/SKILL.md`, with longer reference notes in files beside it. A skill that needs the work vault goes in `.chezmoiignore`'s `workVault` block and `scripts/check`'s `personal_vault_only` list. A row in README's Layout table. Keep employer detail out: the skill finds it at run time and keeps it in the work vault. A work skill or agent goes in private-cradle, never here; see "Work extras" in Decisions |
 | A Claude Code hook | its script in `dot_local/bin/`, registered in `dot_config/claude/modify_settings.json`'s `$hooks` (appended, so others' hooks stay); `scripts/check` asserts each machine's exact SessionStart list |
 | How `cradle-maintainer` works | `dot_config/claude/agents/cradle-maintainer.md.tmpl` (a template for its agentdb servers' paths). Rules and decisions stay in this file, which it reads each time; don't copy them into the agent |
 | Anything that only works through a claude.ai connector (Slack, Google...) | the feature where it belongs, plus a row in README's "claude.ai connectors" table: the connector, the access it needs, and what depends on it. Headless `claude -p` runs load connectors (since 2.1.323) but may use only the tools in their `--allowedTools`: allow read tools by exact name, and let the next interactive session catch up what a run couldn't reach |
@@ -261,15 +261,19 @@ are listed so they aren't proposed again without a reason.
   never committed to a work repo, pushed publicly or shared. A work repo
   keeps its agents out of git in `.git/info/exclude`, never a tracked
   `.gitignore`; a repo's own tracked `.claude/skills/` is the repo's call.
-  Their home is `~/.config/claude/work`, a private repo on the work host
-  (the `workClaudeRepo` question; chosen over a hidden folder in the work
-  vault): `run_after_46-claude-work` links its skills and agents into
+  Their home is the `claude/` folder of private-cradle (below).
+- **private-cradle holds everything about cradle that can't be public**
+  (the user's rule, 2026-11-25): a private repo under the user's work
+  account (`privateCradleRepo`, chosen over a hidden folder in the work
+  vault), cloned to `~/.config/private-cradle`. Its `claude/` part:
+  `run_after_46-private-cradle` links its skills and agents into
   Claude's config, `modify_settings.json` merges its `settings.json`, the
   journal follows its `journal.md` and the evening run allows its
   `journal-tools`, and `vault-sync` clones and backs it up. Its README holds
-  the decisions about what's in it. cradle's side stays generic: name no
-  work skill, service or rule in this repo, commit messages or tags. Agents
-  still in work repos' `.claude/agents/` belong there too.
+  the decisions about what's in it, and replaces the personal vault's
+  `cradle.md` for private notes. cradle's side stays generic: name nothing
+  private in this repo, commit messages or tags. Work repos keep a link to
+  their agent in `.claude/agents/` (still excluded), pointing into it.
 - **Apps:** Homebrew installs only Obsidian, plus Ghostty on Ghostty
   machines. Firefox and Slack were removed on 2026-11-20 (Slack is still
   used through its claude.ai connector). The Slack app comes pre-installed
@@ -333,7 +337,7 @@ are listed so they aren't proposed again without a reason.
   run writes every section (chosen 2026-11-23), allowed read tools only:
   Slack's search, thread and profile reads under both names, Google
   Calendar's list, get and search, Drive's and Docs' reads for
-  attached notes, and the tools the work extras' `journal-tools` lists;
+  attached notes, and the tools private-cradle's `journal-tools` lists;
   never create, update, delete or respond. A hook (`journal-check`, on SessionStart
   and UserPromptSubmit, once a day) has the next interactive session catch
   up whichever is missing, saying so in one line without asking, then back
