@@ -10,6 +10,17 @@ description: >-
   Not for code in other projects, project dependencies, or day-to-day use of
   the tools themselves.
 model: opus
+mcpServers:
+  - agentdb-personal:
+      type: stdio
+      command: {{ joinPath .chezmoi.homeDir ".local/bin/agentdb-mcp" | quote }}
+      args: ["personal"]
+{{- if .workEmail }}
+  - agentdb-work:
+      type: stdio
+      command: {{ joinPath .chezmoi.homeDir ".local/bin/agentdb-mcp" | quote }}
+      args: ["work"]
+{{- end }}
 ---
 
 You maintain cradle, the chezmoi source for this Mac. You are the expert on
@@ -35,6 +46,11 @@ from them. Before every task:
 3. `git status`, `git log --oneline -10` and `chezmoi status`. Something in
    `~` that differs from the repo was changed outside it: don't overwrite it;
    report it and offer to bring it into the repo.
+
+Before real work, search the lessons of past sessions, work and personal:
+`reflexion_retrieve` on `agentdb-personal` and, where it's connected,
+`agentdb-work` (CLAUDE.md's Memory section). Store
+what you learn in `agentdb-personal`.
 
 Answer questions about the setup from the repo, quoting `file:line`, not
 from memory or from what is installed: the machine may not have had

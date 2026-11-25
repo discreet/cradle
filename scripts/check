@@ -130,13 +130,13 @@ identity() { # identity <home> <remote url> <email> <signing key> [rewritten url
   got="$(g "$1" config user.email) $(g "$1" config user.signingkey) $(g "$1" ls-remote --get-url origin)"
   [[ $got == "$3 $4 ${5:-$2}" ]] || { echo "expected: $3 $4 ${5:-$2}"; echo "got:      $got"; return 1; }
 }
-agentdb_db() { # agentdb_db <home> <folder> <remote url, or "" for no repo> <expected database>
+agentdb_db() { # agentdb_db <home> <folder> <remote url, or "" for no repo> <expected database> [database argument]
   local bin=$tmp/agentdb-bin got
   mkdir -p "$bin" "$2"
   # shellcheck disable=SC2016 # a fake agentdb that prints the database it's given
   printf '#!/bin/sh\necho "$AGENTDB_PATH"\n' >"$bin/agentdb" && chmod +x "$bin/agentdb"
   if [[ -n $3 ]]; then git init -q "$2" && git -C "$2" remote add origin "$3"; fi
-  got=$(cd "$2" && HOME=$1 XDG_CONFIG_HOME=$1/.config PATH=$bin:$PATH "$1/.local/bin/agentdb-mcp")
+  got=$(cd "$2" && HOME=$1 XDG_CONFIG_HOME=$1/.config PATH=$bin:$PATH "$1/.local/bin/agentdb-mcp" ${5:+"$5"})
   [[ $got == "$1/.local/share/agentdb/$4.db" ]] || { echo "expected $4.db, got: $got"; return 1; }
 }
 ssh_key() { # ssh_key <ssh config> <host> <the only key ssh should offer>
@@ -646,6 +646,15 @@ check "agentdb: a work folder outside git is work" agentdb_db "$home" "$tmp/clie
 check "agentdb: a repo inside a work folder is work" agentdb_db "$home" "$tmp/work/scratch" git@github.com:someone/x.git work
 check "agentdb: a folder that only starts like a work folder is personal" agentdb_db "$home" "$tmp/workshop" "" personal
 check "agentdb: no work identity, always personal" agentdb_db "$home2" "$tmp/a/4" git@github.com:other-org/repo.git personal
+check "agentdb: 'work' picks the work database in a personal folder" agentdb_db "$home" "$tmp/a/5" "" work work
+check "agentdb: 'personal' picks the personal database in a work folder" agentdb_db "$home" "$tmp/work/notes2" "" personal personal
+maintainer_dbs() { # maintainer_dbs <home> <expected agentdb servers in cradle-maintainer, space-separated>
+  local got
+  got=$(sed -n '/^mcpServers:/,/^---/s/^  - \(agentdb-[a-z]*\):$/\1/p' "$1/.config/claude/agents/cradle-maintainer.md" | xargs)
+  [[ $got == "$2" ]] || { echo "expected: $2"; echo "got:      $got"; return 1; }
+}
+check "cradle-maintainer: both agentdb databases with a work identity" maintainer_dbs "$home" "agentdb-personal agentdb-work"
+check "cradle-maintainer: only the personal database without one" maintainer_dbs "$home2" "agentdb-personal"
 check "git: org typed Example-Org matches its URL casing" identity "$home" \
   git@github.com:Example-Org/repo.git work@example.com "~/.ssh/id_ed25519_work.pub" \
   git@git-work:Example-Org/repo.git

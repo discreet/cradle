@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Registers Claude Code's user-scope MCP servers. Claude Code keeps them in its
+# Registers Claude Code's MCP servers (user scope, plus one for cradle's folder). Claude Code keeps them in its
 # own state file (~/.config/claude/.claude.json), so they're added with
 # `claude mcp` rather than written as a file. Re-runs when this script changes.
 set -euo pipefail
@@ -15,6 +15,18 @@ add() {
 # agentdb (npm:agentdb in mise): vector memory, with separate work and personal
 # databases picked by ~/.local/bin/agentdb-mcp.
 add agentdb '{"type": "stdio", "command": {{ joinPath .chezmoi.homeDir ".local/bin/agentdb-mcp" | toJson }}}'
+{{- if .workEmail }}
+
+# agentdb-work: the work database as well, only in sessions started in cradle
+# (local scope: Claude Code keeps it under this folder's entry), so cradle
+# learns from work sessions' lessons too. Its own sessions are personal and
+# store there; the agent cradle-maintainer gets both databases itself.
+(
+  cd {{ .chezmoi.sourceDir | quote }}
+  mise exec -- claude mcp remove --scope local agentdb-work >/dev/null 2>&1 || true
+  mise exec -- claude mcp add-json --scope local agentdb-work \
+    '{"type": "stdio", "command": {{ joinPath .chezmoi.homeDir ".local/bin/agentdb-mcp" | toJson }}, "args": ["work"]}' >/dev/null)
+{{- end }}
 
 # superlogical: Superlogical's hosted Rex community server (docs, changelog,
 # Rex Beta Discord threads). Signing in is per machine: /mcp in Claude Code,

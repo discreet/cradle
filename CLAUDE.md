@@ -54,7 +54,7 @@ that need it. After each change, put anything worth keeping in one place:
 | Decisions, rules, how to change things | This file and README.md: the only memory every machine gets, through git. Public, so nothing private |
 | Private values that differ per machine (hosts, orgs, paths) | A chezmoi question (`.chezmoi.toml.tmpl`), used through templates |
 | Private notes every machine needs (which hosts or orgs are in use, quirks of the user's accounts) | `cradle.md` in the personal Obsidian vault, backed up and cloned to each machine by `vault-sync` |
-| Lessons: what worked or failed and what to do next time | agentdb (`reflexion_store`); sessions here use the personal database |
+| Lessons: what worked or failed and what to do next time | agentdb. Work here learns from both databases: before real work, `reflexion_retrieve` on `agentdb` (personal, this folder's) and `agentdb-work` (work sessions' lessons, connected here on machines with a work identity); `cradle-maintainer` has them as `agentdb-personal` and `agentdb-work`. Store in the personal one, and bring nothing private from a work lesson into the repo: restate it in generic words |
 | Facts about one machine only, or work in progress on it | Claude Code's own project memory, which stays on that machine |
 
 Don't keep a decision or a rule in Claude Code's memory or agentdb: it would
@@ -110,7 +110,7 @@ and every tag.
 | Claude Code settings, plugins, MCP servers | see the Claude Code section of README.md |
 | A Claude Code agent | `dot_config/claude/agents/<name>.md`, only when it needs other tools, model or its own context; know-how alone is a skill. A row in README's Claude Code table. The session-start list (`claude-agents`) finds it by itself |
 | A Claude Code hook | its script in `dot_local/bin/`, registered in `dot_config/claude/modify_settings.json`'s `$hooks` (appended, so others' hooks stay); `scripts/check` asserts each machine's exact SessionStart list |
-| How `cradle-maintainer` works | `dot_config/claude/agents/cradle-maintainer.md`. Rules and decisions stay in this file, which it reads each time; don't copy them into the agent |
+| How `cradle-maintainer` works | `dot_config/claude/agents/cradle-maintainer.md.tmpl` (a template for its agentdb servers' paths). Rules and decisions stay in this file, which it reads each time; don't copy them into the agent |
 | Obsidian settings or vault templates | `obsidian/`, applied to the work vault by `run_onchange_after_35-obsidian.sh.tmpl` (JSON settings are merged into the vault's `.obsidian/` files). Where past daily notes are archived: `dot_local/bin/executable_daily-archive.tmpl` alone (`--path` answers for `journal-check`); the journal skill's "Finding or creating the note" describes the same layout |
 | A file in the repo that must not land in `~` | `.chezmoiignore` (names starting with `.` are skipped already) |
 
