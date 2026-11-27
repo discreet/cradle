@@ -282,6 +282,66 @@ Project agents:
     and .hooks == [{type: "command", command: "\($h)/.local/bin/claude-agents"}])' \
     "$home/.config/claude/settings.json" >/dev/null || { echo "no agent list hook"; return 1; }
 }
+gh_read_only() { # every session reads any repo with gh; listed owners' repos refuse writes
+  local hook=$home3/.local/bin/gh-read-only g=$tmp/gh line want dir cmd st bad=0 guard
+  [[ ! -e $home/.local/bin/gh-read-only ]] || { echo "installed without private-cradle"; bad=1; }
+  [[ -x $hook ]] || { echo "not installed with private-cradle"; return 1; }
+  jq -e '.hooks.PreToolUse == null' "$home/.config/claude/settings.json" >/dev/null ||
+    { echo "hook registered without private-cradle"; bad=1; }
+  guard=$(jq -r '.hooks.PreToolUse[] | select(.matcher == "Bash") | .hooks[0].command' \
+    "$home3/.config/claude/settings.json") || { echo "hook not registered with private-cradle"; return 1; }
+  mkdir -p "$g/home/.config/private-cradle/claude" "$g/nolist"
+  printf '# work\nExample-Org\n' >"$g/home/.config/private-cradle/claude/gh-read-only"
+  for dir in work mine plain; do git init -q "$g/$dir"; done
+  git -C "$g/work" remote add origin git@github.com:Example-Org/repo.git
+  git -C "$g/mine" remote add origin git@github.com:someone/repo.git
+  run() { # run <home> <folder> <command>
+    jq -n --arg c "$3" --arg d "$g/$2" '{tool_name: "Bash", cwd: $d, tool_input: {command: $c}}' |
+      HOME=$g/$1 "$hook" 2>/dev/null
+  }
+  while IFS='|' read -r want dir cmd; do
+    run home "$dir" "$cmd"; st=$?
+    [[ $st == "$want" ]] || { echo "exit $st, not $want, in $dir: $cmd"; bad=1; }
+  done <<'EOF'
+0|work|gh pr view 12 --comments
+0|work|gh pr list --json number --jq '.[].number' | head
+0|work|gh run view 123 --log
+0|work|gh search prs --author @me
+0|work|gh api -X GET repos/Example-Org/repo/branches/main/protection --jq .url
+0|work|gh api graphql -f query='query { viewer { login } }'
+0|work|git commit -m "gh pr merge is blocked" && ls ~/.config/gh
+0|mine|gh pr merge 1
+0|mine|gh api -X POST repos/someone/repo/issues -f title=t
+0|work|gh pr comment 1 -R someone/repo --body hi
+0|work|cd ../mine && gh release create v1
+2|work|gh pr comment 1 --body hi
+2|mine|gh pr merge 1 -R example-org/repo
+2|mine|gh pr comment https://github.com/Example-Org/repo/pull/3 -b hi
+2|mine|gh api -XPATCH repos/Example-Org/repo
+2|mine|gh api orgs/Example-Org/teams -f name=x
+2|mine|gh api graphql -f query='mutation { x }'
+2|mine|cd ../work && gh workflow run deploy.yml
+2|mine|gh secret set X --org Example-Org
+2|plain|gh pr merge 1
+2|mine|gh repo create newthing
+2|mine|gh auth token
+2|work|echo "$(gh run rerun 1)"
+2|work|bash -c 'gh pr close 1'
+2|work|G=gh; $G pr merge 1
+2|work|'g'h workflow run x
+2|work|gh pr view 'unterminated
+EOF
+  run nolist mine 'gh pr merge 1'; st=$?
+  [[ $st == 2 ]] || { echo "a write passed without the owners list (exit $st)"; bad=1; }
+  echo 'not json, gh' | "$hook" 2>/dev/null; st=$?
+  [[ $st == 2 ]] || { echo "bad input not refused (exit $st)"; bad=1; }
+  # A missing script blocks only commands naming gh.
+  guard=${guard//$home3/$g/nolist}
+  echo '{"tool_input": {"command": "ls"}}' | sh -c "$guard" 2>/dev/null || { echo "missing script blocked ls"; bad=1; }
+  echo '{"tool_input": {"command": "gh pr view 1"}}' | sh -c "$guard" 2>/dev/null; st=$?
+  [[ $st == 2 ]] || { echo "missing script let gh through (exit $st)"; bad=1; }
+  return "$bad"
+}
 is_work() { # git identity or work folder; anything else, or no work identity, is personal
   local w=$tmp/is-work bad=0
   mkdir -p "$w/job" "$w/mine" "$tmp/work/notes"
@@ -757,6 +817,7 @@ check "Claude: session start lists user and project agents" claude_agents
 check "Claude: private-cradle's settings add their deny and allow rules" private_cradle_settings
 check "Claude: private-cradle's skills and agents are linked, stale links removed" private_cradle_links
 check "Claude: vault-sync backs up private-cradle with its repo" private_cradle_backup
+check "Claude: gh reads any repo, refuses writes to listed owners, fails closed" gh_read_only
 check "is-work: work by git identity or work folder, else personal" is_work
 check "Obsidian: both vaults open, private folders blocked" obsidian_settings
 check "Obsidian: global instructions name both vaults and private folders" obsidian_instructions

@@ -1,0 +1,362 @@
+#!/usr/bin/python3 -I
+# Claude Code PreToolUse hook on Bash, for every session and agent: gh may
+# read anywhere, but may only write to repos whose owner is not read-only.
+# The read-only owners (GitHub orgs or users, one per line) are private, so
+# they're listed in private-cradle's claude/gh-read-only, not here.
+#
+# A gh command is a read when its subcommand is on READS, or `gh api` is a
+# GET (or a GraphQL query, not a mutation). gh's own config and account
+# (LOCAL) touch no repo. Anything else is a write, checked against the repo
+# it targets: -R/--repo, GH_REPO, a github.com URL, `gh repo` arguments,
+# --org/--owner, `gh api` paths (repos/<owner>/..., orgs/<org>/...), else
+# the git remotes of the folder it runs in (following `cd <dir>` earlier in
+# the line). A write is blocked when that owner is read-only, when the
+# target can't be told, or when the list is missing. Printing the token is
+# always blocked. So is gh reached through another program (bash -c, xargs,
+# env, a variable) or a command line that doesn't parse, since its
+# arguments can't be checked. Blocking is exit 2 with a reason Claude sees;
+# anything without gh passes.
+#
+# It guards against writing by mistake or habit, not against hiding gh on
+# purpose (a name built from pieces, a script file run later), and it reads
+# the command, not the network (curl with a token is outside its reach).
+import json
+import os
+import re
+import shlex
+import subprocess
+import sys
+
+OWNERS_FILE = os.path.expanduser("~/.config/private-cradle/claude/gh-read-only")
+
+READS = {
+    "pr": {"view", "list", "diff", "checks", "status", "checkout"},
+    "issue": {"view", "list", "status"},
+    "run": {"list", "view", "watch", "download"},
+    "workflow": {"list", "view"},
+    "repo": {"view", "list", "clone", "set-default"},
+    "release": {"view", "list", "download"},
+    "ruleset": {"list", "view", "check"},
+    "label": {"list"},
+    "cache": {"list"},
+    "secret": {"list"},
+    "variable": {"list", "get"},
+    "gist": {"view", "list", "clone"},
+    "project": {"list", "view", "field-list", "item-list"},
+    "org": {"list"},
+    "auth": {"status"},
+    "search": None,  # every gh search subcommand only reads
+    "status": None,
+    "browse": None,
+    "version": None,
+    "help": None,
+    "completion": None,
+}
+LOCAL = {
+    "alias": None, "config": None, "extension": None, "gpg-key": None,
+    "ssh-key": None, "gist": None,
+    "auth": {"login", "logout", "refresh", "setup-git", "switch"},
+}
+# Programs that run the command they're given: gh behind them can't be
+# checked, and their quoted arguments may be commands.
+RUNNERS = {"bash", "sh", "zsh", "dash", "fish", "eval", "exec", "command",
+           "env", "xargs", "nohup", "time", "sudo", "doas", "timeout", "nice",
+           "watch", "parallel", "ssh", "script", "su", "find", "mise", "npx"}
+SEPARATORS = {";", "&", "&&", "|", "||", "|&", "(", ")", "\n", ";;", "&>"}
+KEYWORDS = {"!", "{", "}", "if", "then", "else", "elif", "fi", "do", "done",
+            "while", "until", "time"}
+ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+GH_WORD = re.compile(r"(^|[^\w.-])gh($|[^\w.-])")
+URL = re.compile(r"github\.com[/:]([^/\s]+)/", re.I)
+
+
+class Deny(Exception):
+    pass
+
+
+def is_gh(word):
+    return os.path.basename(word) == "gh"
+
+
+def names_gh(word):
+    # As an argument: gh itself or a path to the program, not ~/.config/gh.
+    return word == "gh" or word.endswith(("/bin/gh", "/shims/gh"))
+
+
+def read_only_owners():
+    try:
+        with open(OWNERS_FILE) as f:
+            return {line.split("#")[0].strip().lower() for line in f} - {""}
+    except OSError:
+        return None
+
+
+def tokens(line):
+    # Backticks open a command like "$(" does; spell them that way.
+    lex = shlex.shlex(line.replace("`", " $( "), posix=True,
+                      punctuation_chars=";&|()<>\n")
+    lex.wordchars += "$@%+:,{}[]^!#~=*?"
+    lex.whitespace = " \t\r"
+    lex.commenters = ""  # bash's "#" comment rule differs; read it all
+    try:
+        return list(lex)
+    except ValueError:
+        raise Deny("the command line doesn't parse, and it mentions gh")
+
+
+def owner_of(spec):
+    """The owner in owner/repo, host/owner/repo or a github.com URL."""
+    m = URL.search(spec)
+    if m:
+        return m.group(1)
+    parts = spec.strip("/").split("/")
+    if len(parts) == 2 and all(parts):
+        return parts[0]
+    if len(parts) == 3 and "." in parts[0] and all(parts):
+        return parts[1]
+    return None
+
+
+def remote_owners(cwd):
+    try:
+        out = subprocess.run(["git", "-C", cwd, "remote", "-v"], capture_output=True,
+                             text=True, timeout=5).stdout
+    except (OSError, subprocess.SubprocessError):
+        return set()
+    owners = set()
+    for line in out.splitlines():
+        fields = line.split()
+        if len(fields) < 2:
+            continue
+        path = re.sub(r"^[a-z+]+://[^/]+/", "", fields[1])  # https://host/, ssh://git@host/
+        path = re.sub(r"^[^/:]+:", "", path)                # git@host:
+        if "/" in path:
+            owners.add(path.split("/")[0])
+    return owners
+
+
+def flag_values(args, *names):
+    vals = []
+    for i, a in enumerate(args):
+        for n in names:
+            if a == n:
+                if i + 1 < len(args):
+                    vals.append(args[i + 1])
+            elif n.startswith("--") and a.startswith(n + "="):
+                vals.append(a[len(n) + 1:])
+            elif not n.startswith("--") and a.startswith(n) and not a.startswith("--"):
+                vals.append(a[len(n):])
+    return vals
+
+
+def api_request(args):
+    """(is_read, endpoint) for gh api's arguments."""
+    endpoint, method, fields, query = None, None, False, ""
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a.startswith("--"):
+            name, eq, value = a.partition("=")
+            if name in ("--field", "--raw-field", "--input", "--method", "--header",
+                        "--jq", "--template", "--preview", "--hostname", "--cache"):
+                if not eq:
+                    i += 1
+                    value = args[i] if i < len(args) else ""
+                if name == "--method":
+                    method = value.upper()
+                elif name in ("--field", "--raw-field", "--input"):
+                    fields = True
+                    query += " " + name + "=" + value
+        elif a.startswith("-") and len(a) > 1:
+            # A cluster of short flags; the first that takes a value takes
+            # the rest of the cluster, or the next word.
+            for j, c in enumerate(a[1:], 1):
+                if c in "XHqtpfF":
+                    value = a[j + 1:]
+                    if not value:
+                        i += 1
+                        value = args[i] if i < len(args) else ""
+                    if c == "X":
+                        method = value.lstrip("=").upper()
+                    elif c in "fF":
+                        fields = True
+                        query += " -" + c + " " + value
+                    break
+        elif endpoint is None:
+            endpoint = a
+        i += 1
+    if endpoint is None:
+        raise Deny("gh api without an endpoint")
+    if endpoint.strip("/") == "graphql":
+        # Always a POST; a query given inline that isn't a mutation only reads.
+        inline = re.search(r"\bquery=", query) and not re.search(r"(=@|--input)", query)
+        return bool(inline and not re.search(r"\bmutation\b", query)), endpoint
+    if method:
+        return method == "GET", endpoint
+    return not fields, endpoint
+
+
+def classify(args):
+    """('read' | 'local' | 'write', the subcommand words) for gh's arguments."""
+    if any(a in ("--help", "-h") for a in args):
+        return "read", []
+    words = []
+    i = 0
+    while i < len(args) and len(words) < 2:
+        a = args[i]
+        if a in ("-R", "--repo"):
+            i += 2
+            continue
+        if a.startswith(("--repo=", "-R")):
+            i += 1
+            continue
+        if a.startswith("-"):
+            if not words:
+                if a == "--version":
+                    return "read", []
+                raise Deny("gh %s: unknown flag before the subcommand" % a)
+        else:
+            words.append(a)
+        i += 1
+    if not words:
+        raise Deny("gh with no subcommand")
+    group = words[0]
+    sub = words[1] if len(words) > 1 else ""
+    if group == "auth" and (sub == "token" or any(
+            a in ("-t", "--show-token") or a.startswith("--show-token") for a in args)):
+        raise Deny("gh would print its token")
+    if group == "api":
+        rest = args[args.index("api") + 1:]
+        is_read, endpoint = api_request(rest)
+        return ("read" if is_read else "write"), ["api", endpoint]
+    for table, kind in ((READS, "read"), (LOCAL, "local")):
+        if group in table and (table[group] is None or sub in table[group]):
+            return kind, words
+    return "write", words
+
+
+def targets(args, words, cwd, env_repo):
+    """The owners a gh write may touch; empty when it can't be told."""
+    owners = set()
+    for v in flag_values(args, "-R", "--repo") + ([env_repo] if env_repo else []):
+        o = owner_of(v)
+        if not o:
+            raise Deny("can't tell the owner from %r; use -R owner/repo" % v)
+        owners.add(o)
+    owners.update(flag_values(args, "--org", "-o", "--owner"))
+    for a in args:
+        m = URL.search(a)
+        if m:
+            owners.add(m.group(1))
+    if words[0] == "api":
+        ep = words[1].lstrip("/")
+        m = re.match(r"(repos|orgs|users)/([^/?]+)", ep)
+        if m and not m.group(2).startswith("{"):
+            owners.add(m.group(2))
+        elif ep.startswith("repos/{owner}"):
+            owners.update(remote_owners(cwd))
+        return owners  # other endpoints name no repo to tell from
+    if words[0] == "repo" and len(words) > 1:
+        for a in args[args.index(words[1]) + 1:]:
+            if not a.startswith("-"):
+                o = owner_of(a)
+                if o:
+                    owners.add(o)
+                elif words[1] == "create":
+                    raise Deny("gh repo create %s: name the owner, as owner/%s" % (a, a))
+                break
+    if not owners:
+        owners = remote_owners(cwd)
+    return owners
+
+
+def check_gh(args, cwd, env_repo):
+    kind, words = classify(args)
+    if kind != "write":
+        return
+    what = "gh " + " ".join(words[:2])
+    owners = targets(args, words, cwd, env_repo)
+    ro = read_only_owners()
+    if ro is None:
+        raise Deny("%s writes, and the read-only owners list (%s) is missing, "
+                   "so no write can be checked" % (what, OWNERS_FILE))
+    if not owners:
+        raise Deny("%s writes, and its repo can't be told from the command or "
+                   "the folder's git remotes: add -R owner/repo" % what)
+    hit = sorted(o for o in owners if o.lower() in ro)
+    if hit:
+        raise Deny("%s writes to %s, whose repos are read-only for gh" % (what, ", ".join(hit)))
+
+
+def check_line(line, cwd, depth=0):
+    if depth > 3:
+        raise Deny("gh nested too deep to check")
+    if not GH_WORD.search(re.sub(r"[\"'\\\\]", "", line)):
+        return
+    cmd = []
+    for t in tokens(line) + [";"]:
+        if t in SEPARATORS or (t and set(t) <= set(";&|()<>\n")):
+            cwd = check_command(cmd, cwd, depth)
+            cmd = []
+        else:
+            cmd.append(t)
+
+
+def check_command(cmd, cwd, depth):
+    """Check one simple command; return the folder the next one runs in."""
+    i, env_repo = 0, os.environ.get("GH_REPO", "")
+    while i < len(cmd) and (cmd[i] in KEYWORDS or ASSIGNMENT.match(cmd[i])):
+        if ASSIGNMENT.match(cmd[i]):
+            name, value = cmd[i].split("=", 1)
+            if names_gh(value):
+                raise Deny("gh assigned to a variable can't be checked; run gh directly")
+            if name == "GH_REPO":
+                env_repo = value
+            check_line(value, cwd, depth + 1)  # A="gh pr merge 1"; $A
+        i += 1
+    if i >= len(cmd):
+        return cwd
+    word, rest = cmd[i], cmd[i + 1:]
+    for t in rest:
+        if "$(" in t or "`" in t:
+            check_line(t.replace("$(", " ; ( "), cwd, depth + 1)  # "$(gh ...)" in quotes
+    if word == "cd":
+        dest = next((a for a in rest if not a.startswith("-")), "~")
+        dest = re.sub(r"^\$\{?HOME\}?", "~", dest)
+        return os.path.normpath(os.path.join(cwd, os.path.expanduser(dest)))
+    if is_gh(word):
+        check_gh(rest, cwd, env_repo)
+    elif os.path.basename(word) in RUNNERS:
+        for t in rest:
+            if names_gh(t):
+                raise Deny("gh run through %s can't be checked; run gh directly"
+                           % os.path.basename(word))
+            if " " in t or "\n" in t or "\t" in t:
+                check_line(t, cwd, depth + 1)  # bash -c '...', ssh host '...'
+    return cwd
+
+
+def main():
+    raw = sys.stdin.read()
+    try:
+        data = json.loads(raw)
+        line = data.get("tool_input", {}).get("command", "")
+        cwd = data.get("cwd") or os.getcwd()
+    except (ValueError, AttributeError):
+        if GH_WORD.search(raw):
+            print("gh-read-only: unreadable hook input; refusing gh.", file=sys.stderr)
+            return 2
+        return 0
+    if not isinstance(line, str):
+        return 0
+    try:
+        check_line(line, cwd)
+    except Exception as e:  # a Deny, or a bug here: either way, refuse
+        print("Blocked: %s. If the user wants this, give them the exact "
+              "command to run themselves as `! <command>`." % e, file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

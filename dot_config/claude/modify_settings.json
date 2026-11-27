@@ -82,5 +82,16 @@
 {{-   $rex := dict "type" "command" "command" "/bin/sh -c 'rex __internal session-start --agent claude 2>/dev/null || true'" "timeout" 5 -}}
 {{-   $_ := set $hooks "SessionStart" (append (get $hooks "SessionStart" | default list) (dict "hooks" (list $rex))) -}}
 {{- end -}}
+{{- /*
+  With private-cradle, which lists the owners whose repos are gh read-only:
+  every Bash call in every session and agent goes through gh-read-only. If
+  the script is missing or fails (not exit 0 or 2), only commands naming gh
+  are blocked, so a broken hook can't take Bash away from the session that
+  has to fix it.
+*/ -}}
+{{- if .privateCradleRepo -}}
+{{-   $guard := printf `h=%s; in=$(cat); if [ -x "$h" ]; then printf '%%s' "$in" | "$h"; s=$?; if [ $s -eq 0 ] || [ $s -eq 2 ]; then exit $s; fi; fi; if printf '%%s' "$in" | grep -Eq '(^|[^[:alnum:]_.-])gh([^[:alnum:]_.-]|$)'; then echo "gh is blocked: $h is missing or failed; chezmoi apply restores it" >&2; exit 2; fi` (joinPath .chezmoi.homeDir ".local/bin/gh-read-only") -}}
+{{-   $_ := set $hooks "PreToolUse" (list (dict "matcher" "Bash" "hooks" (list (dict "type" "command" "command" $guard)))) -}}
+{{- end -}}
 {{- $_ := set $managed "hooks" $hooks -}}
 {{- mergeOverwrite $live $managed | toPrettyJson "  " }}

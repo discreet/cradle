@@ -26,6 +26,9 @@ scripts
 Library/LaunchAgents/local.obsidian-journal.plist
 Library/LaunchAgents/local.daily-archive.plist
 {{- end }}
+{{- if not .privateCradleRepo }}
+.local/bin/gh-read-only
+{{- end }}
 {{- if not (or .workVaultRepo .personalVaultRepo .privateCradleRepo) }}
 .local/bin/vault-sync
 {{- end }}

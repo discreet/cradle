@@ -262,6 +262,21 @@ are listed so they aren't proposed again without a reason.
   keeps its agents out of git in `.git/info/exclude`, never a tracked
   `.gitignore`; a repo's own tracked `.claude/skills/` is the repo's call.
   Their home is the `claude/` folder of private-cradle (below).
+- **gh is read-only for the work org's repos, in every session and agent**
+  (the user's standing rule, 2026-11-27; first set for the code agents only,
+  widened the same day). Unless the user explicitly allows a write in that
+  session, no Claude session or agent writes to those repos with gh; the
+  user runs such a write themselves (`! <command>`). The user's own repos,
+  this one included, stay read/write: managing the machine needs them. The
+  read-only owners are private, so they're listed in private-cradle's
+  `claude/gh-read-only`, not here or in a chezmoi question (`workOrgs` also
+  holds the user's own work account, which must stay writable). Enforced by
+  `~/.local/bin/gh-read-only`, a global `PreToolUse` hook on Bash
+  (`modify_settings.json`, machines with private-cradle): reads pass, and a
+  gh write is blocked when its repo's owner is listed or its repo can't be
+  told. A hook only in the code agents' frontmatter was the first version;
+  the user chose everywhere. The code agents also state the rule in their
+  Hard rules.
 - **private-cradle holds everything about cradle that can't be public**
   (the user's rule, 2026-11-25): a private repo under the user's work
   account (`privateCradleRepo`, chosen over a hidden folder in the work
