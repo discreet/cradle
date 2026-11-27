@@ -9,6 +9,8 @@
 # - when the evening run had no access to ~/Documents (its no-access marker),
 #   tells the user to grant Full Disk Access and writes that day's whole
 #   summary, once a day until a run succeeds;
+# - when the evening run failed (its failed marker: no network, or Claude
+#   failed), writes those days' whole summaries, once;
 # - on a weekday, adds today's meetings to today's daily note (as headings to
 #   take notes under), if they aren't there yet.
 # Each day is checked once, so later prompts return after two file tests. The
@@ -25,7 +27,7 @@ agenda=""
 ((weekday <= 5)) && [[ ! -e $state/agenda-checked-$today ]] && agenda=1
 noaccess=""
 [[ -e $state/no-access && ! -e $state/no-access-told-$today ]] && noaccess=1
-[[ -n $agenda || -n $noaccess || ! -e $state/checked-$day ]] || exit 0
+[[ -n $agenda || -n $noaccess || -e $state/failed || ! -e $state/checked-$day ]] || exit 0
 
 IFS=$'\t' read -r event cwd < <(jq -r '[.hook_event_name // "SessionStart", .cwd // ""] | @tsv')
 [[ $cwd != "$state" ]] || exit 0
@@ -55,6 +57,13 @@ if [[ -n $noaccess ]]; then
     tasks+=("write the summary for $failed with the journal skill (all sections; the evening run couldn't)")
     [[ $failed != "$day" ]] || touch "$state/checked-$day" # covers that day's catch-up too
   fi
+fi
+if [[ -e $state/failed ]]; then
+  while read -r missed; do
+    tasks+=("write the summary for $missed with the journal skill (all sections; the evening run failed, see ~/Library/Logs/obsidian-journal.log)")
+    [[ $missed != "$day" ]] || touch "$state/checked-$day"
+  done < <(sort -u "$state/failed")
+  rm -f "$state/failed"
 fi
 if [[ ! -e $state/checked-$day ]]; then
   touch "$state/checked-$day"

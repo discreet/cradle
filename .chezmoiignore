@@ -22,6 +22,7 @@ scripts
 .local/bin/obsidian-journal
 .local/bin/journal-check
 .local/bin/daily-archive
+.local/bin/net-wait
 Library/LaunchAgents/local.obsidian-journal.plist
 Library/LaunchAgents/local.daily-archive.plist
 {{- end }}

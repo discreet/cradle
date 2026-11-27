@@ -106,9 +106,11 @@ or remove their text. It looks like this:
      them, requests, follow-ups they promised). Lead with anything waiting on
      the user.
    - A source you checked that had nothing gets one line, `- Nothing.` (in
-     Meetings, keep any notes and still end with `%% journal %%`). Leave a
-     source you couldn't reach as it is: the next interactive session
-     catches it up.
+     Meetings, keep any notes and still end with `%% journal %%`). A
+     connector call that times out or drops its connection gets two more
+     tries, a few seconds apart; a source still failing is one you couldn't
+     reach. Leave it as it is (the next interactive session catches it up)
+     and end your reply with one line for each: the source and its error.
 7. **Update the note:** replace Terminal and Slack if the note has them (up to
    the next `## ` heading) and touch nothing else; otherwise append them.
    Merge Meetings as described above instead of replacing it.

@@ -395,7 +395,8 @@ the `superlogical` MCP server.
 | `Brewfile.tmpl` | Homebrew formulae and apps; a template, so Ghostty is left out on Rex machines |
 | `CLAUDE.md`, `.claude/settings.json` | How Claude Code maintains this repo, and which commands it may run here without asking. Not copied to `~` |
 | `obsidian/` | Obsidian's Daily notes and Templates settings and the vault's templates (daily note, meeting), applied to the work vault by `run_onchange_after_35-obsidian.sh.tmpl`. Not copied to `~` |
-| `dot_config/claude/skills/journal/`, `dot_local/bin/executable_journal-data`, `dot_local/bin/executable_obsidian-journal`, `dot_local/bin/executable_journal-check.tmpl`, `private_Library/LaunchAgents/local.obsidian-journal.plist.tmpl` | The work vault's journal (see Obsidian); installed only when a work vault is set |
+| `dot_config/claude/skills/journal/`, `dot_local/bin/executable_journal-data`, `dot_local/bin/executable_obsidian-journal.tmpl`, `dot_local/bin/executable_journal-check.tmpl`, `private_Library/LaunchAgents/local.obsidian-journal.plist.tmpl` | The work vault's journal (see Obsidian); installed only when a work vault is set |
+| `dot_local/bin/executable_net-wait` | Waits up to 5 minutes for the network before the evening journal and the morning archive's backup, since launchd starts a run the Mac slept through as it wakes, often before Wi-Fi is back; installed only when a work vault is set |
 | `dot_local/bin/executable_daily-archive.tmpl`, `private_Library/LaunchAgents/local.daily-archive.plist.tmpl` | Moves the work vault's past daily notes into month and week folders every morning (see Obsidian); installed only when a work vault is set |
 | `.githooks/commit-msg` | Rejects commit messages that aren't Conventional Commits. `bootstrap.sh` turns it on with `git config core.hooksPath .githooks` |
 | `scripts/check` | Renders every file into a throwaway home folder and checks it with the program that reads it (shellcheck, tmux, git, ssh, plutil, jq, Neovim, Ghostty, Homebrew). Run before every apply |
@@ -437,7 +438,7 @@ it runs `claude`: in a shell, through its shims (the evening journal) or with
 | Rex (Rex machines) | Rex's `rex` skill (`dot_config/claude/skills/rex/`, the stub `rex skill setup` writes; it reads its guide from the installed `rex`) and its SessionStart hook (`modify_settings.json`), which tells Rex which session Claude runs in. Rex adds both itself at first launch; they're in the repo so applying doesn't remove them. |
 | Agent list at session start | `~/.local/bin/claude-agents`, a SessionStart hook (`modify_settings.json`, every machine) on startup, `/resume` and `/clear`. It shows you, not Claude, the custom agents the session can use, as `SessionStart:startup says: User agents: ...`: user agents from `~/.config/claude/agents/` and project agents from every `.claude/agents/` between the session's folder and its repo root, each with its name and the first sentence of its description. It follows symlinks, skips broken links and files without a name and description, and lists an agent once where Claude Code would use only one (the closest project agent; a project agent over a user one of the same name). It reads the files at each start, so it lists agents this repo doesn't manage too, and prints nothing when there are none. Built-in agents aren't listed. |
 | Agent: cradle-maintainer | `dot_config/claude/agents/cradle-maintainer.md.tmpl`, the expert on this repo. Every session hands it setup changes and questions, from any folder. It reads this README and CLAUDE.md before each task rather than repeating them, so it can't drift from them. It has both agentdb databases as its own servers (`agentdb-personal`, `agentdb-work`), so it learns from work and personal lessons wherever it's started. It edits, updates the docs and runs `scripts/check`, then stops and returns a summary of `chezmoi diff`; the session runs `chezmoi apply` (your OK) and messages it back to check the result, commit and push. Opus. |
-| private-cradle | Anything about this setup that can't be public lives in `~/.config/private-cradle`, a private repo under your work account (chezmoi's `privateCradleRepo` question), never in this repo. Its `claude/` holds work skills, agents and settings. `run_after_46-private-cradle.sh.tmpl` links each `skills/<name>/` and `agents/<name>.md` there into Claude's config on every apply and removes links whose target is gone; it never replaces a real file. `modify_settings.json` adds the `permissions.deny` and `allow` from its `settings.json`. The journal follows its `journal.md`, and the evening run also allows the tools listed in its `journal-tools`. `vault-sync` clones it on a new machine and backs it up every evening. Its own README says what's in it. |
+| private-cradle | Anything about this setup that can't be public lives in `~/.config/private-cradle`, a private repo under your work account (chezmoi's `privateCradleRepo` question), never in this repo. Its `claude/` holds work skills, agents and settings. `run_after_46-private-cradle.sh.tmpl` links each `skills/<name>/` and `agents/<name>.md` there into Claude's config on every apply and removes links whose target is gone; it never replaces a real file. `modify_settings.json` adds the `permissions.deny` and `allow` from its `settings.json`. The journal follows its `journal.md`, and the evening run may read anything in it (read only) and also allows the tools listed in its `journal-tools`, where `<vault>` stands for the work vault's path (a rule names it exactly; a `*` there would also allow inserted git options). `vault-sync` clones it on a new machine and backs it up every evening. Its own README says what's in it. |
 | Skills from GitHub | Add an entry to `.chezmoiexternal.toml`, pinned to a commit, with a link to the skill's history so updates can be checked by hand. Your own skills go in `dot_config/claude/skills/<name>/SKILL.md`. |
 | MCP servers (user scope) | Claude Code stores these in its own state file, so they're registered by `run_onchange_after_45-claude-mcp.sh.tmpl`: add an `add <name> '<json>'` line there and the server's tool to mise. It replaces a server of the same name; removing a line doesn't unregister it (`claude mcp remove --scope user <name>`). |
 | MCP server: agentdb | [AgentDB](https://github.com/ruvnet/agentdb) (`npm:agentdb` in mise), vector memory with reflexion, skills and a causal graph as MCP tools. Work and personal memories are separate databases in `~/.local/share/agentdb/`: `~/.local/bin/agentdb-mcp` starts the server in the session's folder and uses `work.db` when `is-work` says it's work: git's identity there is the work one (the same remote rules as commits) or the folder is inside one of the work folders chezmoi asked for (in git or not), otherwise `personal.db`. Without a work identity everything is personal. To change the work folders, edit `workFolders` (full paths, `;` between them) in `~/.config/chezmoi/chezmoi.toml` and `chezmoi apply`. The global instructions tell Claude to search it before real tasks and store what it learned after (`reflexion_retrieve`, `reflexion_store`); nothing is stored automatically. A session keeps the database it started with, so start Claude in the repo, not in a parent folder of work and personal repos. `agentdb-mcp work` or `agentdb-mcp personal` picks one outright. cradle is the one exception to the split: sessions started in it also get `agentdb-work` (registered at local scope for this folder, on machines with a work identity), and `cradle-maintainer` has both, so setup work learns from every lesson. `/mcp` in Claude Code shows whether it's connected. |
@@ -457,7 +458,8 @@ know:
   can only use the tools they're allowed. The evening journal is allowed
   read tools only: Slack's, Google Calendar's (list, get and search
   events), Drive's and Docs' for attached meeting notes, and whatever the
-  `journal-tools` in private-cradle lists (checked headless 2026-11-23). The
+  `journal-tools` in private-cradle lists (checked headless 2026-11-23). A
+  call that times out or drops its connection is tried twice more; the
   next session you open still fills in whatever it couldn't reach.
 - Some arrive under another name: Slack can come as the Slack plugin
   (`mcp__plugin_slack_slack__*`) instead of the connector
@@ -519,13 +521,15 @@ or MCP server:
   Week 2 days 8–14, Week 3 days 15–21 and Week 4 the 22nd to the month's
   end, so every month has four week folders. It runs every morning at
   04:00 (on waking, if the Mac was asleep) from a LaunchAgent, and again at
-  the start of `/journal agenda`, so a morning the Mac was off is still
+  the start of `/journal agenda` (allowed without asking), so a morning the Mac was off is still
   covered; never in the evening run, when the note is still today's. It
   moves only files named like a date, never overwrites or deletes: if the
   archive already has a note for that day (say Obsidian made a new empty
   one when you opened a past day from its top-level name), it leaves both
   and says so, for you to merge. Then it backs up the vaults with
-  `vault-sync`. Links like `[[2026-11-23]]` still work, since Obsidian
+  `vault-sync`, from the LaunchAgent once the network is up (`net-wait`,
+  up to 5 minutes). With nothing to move, its log says "Nothing to
+  archive." Links like `[[2026-11-23]]` still work, since Obsidian
   finds notes by name. The journal looks for a past day's note in the
   archive first, and creates a missing past day's note straight in its
   archive folder.
@@ -566,7 +570,9 @@ or MCP server:
   section. It needs Full Disk Access for Homebrew's bash (Getting started,
   After bootstrap); without it, the log says so instead of "Nothing
   happened today", and the next session tells you and writes that day's
-  summary. For whatever else it couldn't write, a hook (`journal-check`, run when Claude starts and on
+  summary. It waits up to 5 minutes for the network (`net-wait`); if it's
+  still down, or the Claude run fails, the log says so and the next
+  session writes that day's whole summary without asking. For whatever else it couldn't write, a hook (`journal-check`, run when Claude starts and on
   each message, checking once a day) looks at the last weekday's note; if its Meetings section isn't
   summarised yet (marked `%% journal %%`, hidden in reading view) or its
   Slack section is empty, Claude says in one line that it's catching up and

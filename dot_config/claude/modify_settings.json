@@ -54,6 +54,10 @@
 {{- if or .workVaultRepo .personalVaultRepo .privateCradleRepo -}}
 {{-   $extraAllow = append $extraAllow "Bash(vault-sync)" -}}
 {{- end -}}
+{{- /* So does daily-archive, exactly (the agenda mode runs it; auto mode refuses it otherwise). */ -}}
+{{- if .workVault -}}
+{{-   $extraAllow = concat $extraAllow (list "Bash(daily-archive)" "Bash(daily-archive --path *)") -}}
+{{- end -}}
 {{- if $extraAllow -}}
 {{-   $allow := list -}}
 {{-   if hasKey $live "permissions" -}}

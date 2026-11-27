@@ -7,6 +7,8 @@
 # the backup includes the summary. Log: ~/Library/Logs/obsidian-journal.log.
 # Without access to the work folders it says so here and leaves a marker
 # (no-access) that journal-check reports in the next Claude Code session.
+# When the network isn't up within 5 minutes (net-wait) or Claude fails, it
+# adds the day to another marker (failed), and the next session writes it.
 set -euo pipefail
 
 # launchd's PATH is minimal: mise's shims (claude), ~/.local/bin, Apple's git,
@@ -14,6 +16,7 @@ set -euo pipefail
 PATH="${MISE_DATA_DIR:-$HOME/.local/share/mise}/shims:$HOME/.local/bin:/Library/Developer/CommandLineTools/usr/bin:/opt/homebrew/bin:/usr/bin:/bin"
 # journal-data leaves out sessions in this folder, so this run isn't journaled.
 dir="${XDG_STATE_HOME:-$HOME/.local/state}/cradle/journal"
+vault={{ .workVault | quote }}
 mkdir -p "$dir"
 echo "== $(date)"
 
@@ -41,12 +44,22 @@ elif grep -q '^## ' <<<"$data"; then
     mcp__claude_ai_Google_Docs__read_doc)
   # Plus the tools private-cradle's journal steps need, one per line
   # (# starts a comment).
+  # <vault> stands for the work vault, so a rule names it exactly.
   extra=$HOME/.config/private-cradle/claude/journal-tools
   if [[ -f $extra ]]; then
-    while IFS= read -r t; do [[ -z $t || $t == \#* ]] || tools+=("$t"); done <"$extra"
+    while IFS= read -r t; do [[ -z $t || $t == \#* ]] || tools+=("${t//<vault>/$vault}"); done <"$extra"
+    # private-cradle, read only: its journal steps (journal.md) and what they
+    # use. What the run reads there never goes into cradle (CLAUDE.md).
+    tools+=("Read(~/.config/private-cradle/**)")
   fi
-  (cd "$dir" && claude -p "Use the journal skill to write today's summary into my work Obsidian daily note. Don't run vault-sync; this run backs up the vaults after you." \
-    --permission-mode acceptEdits --allowedTools "${tools[@]}") || echo "The journal run failed."
+  if ! net-wait; then
+    echo "No network, so nothing was journaled; the next Claude Code session writes it."
+    date +%F >>"$dir/failed"
+  elif ! (cd "$dir" && claude -p "Use the journal skill to write today's summary into my work Obsidian daily note. Don't run vault-sync; this run backs up the vaults after you." \
+    --permission-mode acceptEdits --allowedTools "${tools[@]}"); then
+    echo "The journal run failed; the next Claude Code session writes it."
+    date +%F >>"$dir/failed"
+  fi
 else
   rm -f "$dir/no-access"
   echo "Nothing happened today."

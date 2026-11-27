@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Waits until the internet answers (DNS and HTTPS), for up to 5 minutes, and
+# exits 1 if it still doesn't. For the LaunchAgents' runs (obsidian-journal,
+# daily-archive): launchd starts a run missed while the Mac slept as soon as
+# it wakes, often before Wi-Fi is back.
+set -uo pipefail
+
+for ((i = 0; i < 10; i++)); do
+  ((i == 0)) || sleep 30
+  # Any HTTP answer will do; only reaching the server matters.
+  /usr/bin/curl -s -o /dev/null --max-time 10 https://api.anthropic.com && exit 0
+done
+echo "net-wait: no network after 5 minutes" >&2
+exit 1

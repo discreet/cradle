@@ -159,7 +159,7 @@ claude_merge() { # managed Claude settings merge over a live file and keep its k
   mkdir -p "${live%/*}"
   echo '{"model":"opus","theme":"dark","permissions":{"allow":["Bash(ls *)"]}}' >"$live"
   out=$(HOME=$tmp/merge chezmoi --config "$tmp/home.toml" --persistent-state "$tmp/merge.boltdb" cat "$live") || return 1
-  jq -e '.model == "opus" and .theme == "auto" and .permissions.allow == ["Bash(ls *)", "Bash(vault-sync)"]
+  jq -e '.model == "opus" and .theme == "auto" and .permissions.allow == ["Bash(ls *)", "Bash(vault-sync)", "Bash(daily-archive)", "Bash(daily-archive --path *)"]
     and (.permissions.ask | length > 0)' <<<"$out" >/dev/null || { echo "$out"; return 1; }
 }
 obsidian_settings() {
@@ -182,7 +182,7 @@ obsidian_instructions() {
 personal_vault_only() { # no journal, hooks or daily notes; the vault is still Claude's
   local h=$tmp/home-personal f bad=0
   for f in .config/claude/skills/journal .local/bin/journal-data \
-    .local/bin/obsidian-journal .local/bin/journal-check .local/bin/daily-archive \
+    .local/bin/obsidian-journal .local/bin/journal-check .local/bin/daily-archive .local/bin/net-wait \
     Library/LaunchAgents/local.obsidian-journal.plist Library/LaunchAgents/local.daily-archive.plist; do
     [[ ! -e $h/$f ]] || { echo "installed without a work vault: $f"; bad=1; }
   done
@@ -222,7 +222,8 @@ private_cradle_settings() { # private-cradle's settings.json adds its deny and a
   echo '{"permissions":{"deny":["mcp__example__write"],"allow":["mcp__example__read"]}}' >"$m/.config/private-cradle/claude/settings.json"
   out=$(HOME=$m chezmoi --config "$tmp/home.toml" --persistent-state "$tmp/extras.boltdb" cat "$live") || return 1
   jq -e '(.permissions.deny | index("mcp__example__write") != null)
-    and .permissions.allow == ["Bash(ls *)", "mcp__example__read", "Bash(vault-sync)"]' <<<"$out" >/dev/null ||
+    and .permissions.allow == ["Bash(ls *)", "mcp__example__read", "Bash(vault-sync)", "Bash(daily-archive)",
+      "Bash(daily-archive --path *)"]' <<<"$out" >/dev/null ||
     { echo "$out" | jq .permissions; return 1; }
 }
 private_cradle_links() { # skills and agents in private-cradle are linked; stale links go, real files stay
@@ -379,6 +380,16 @@ journal_check() { # catches up the last weekday's missing summaries and adds tod
   touch "$st/cradle/journal/agenda-checked-$today" "$st/cradle/journal/checked-$day"
   run /somewhere >/dev/null
   [[ -z $(run /somewhere) ]] || { echo "told twice in a day"; return 1; }
+  # The evening run failed on two days: write both, once.
+  rm -rf "$st"; mkdir -p "$st/cradle/journal"
+  printf '%s\n' 2026-01-05 "$day" "$day" >"$st/cradle/journal/failed"
+  touch "$st/cradle/journal/agenda-checked-$today"
+  says "write the summary for 2026-01-05" "write the summary for $day" "evening run failed" -- "catch up" || return 1
+  mkdir -p "$st/cradle/journal"
+  printf '%s\n' "$day" >"$st/cradle/journal/failed"
+  touch "$st/cradle/journal/agenda-checked-$today"
+  run /somewhere >/dev/null
+  [[ -z $(run /somewhere) ]] || { echo "failed day written twice"; return 1; }
   rm -rf "$st"
 }
 journal_data() { # today's work sessions and commits only, without the evening run's own
@@ -467,7 +478,8 @@ daily_archive() { # moves past daily notes into month/week folders; today's, oth
   [[ $(cat "$d/synced") == synced ]] || { echo "no backup after moving"; return 1; }
   rm "$v/2025-01-08.md"
   out=$("$bin/daily-archive" 2>&1) || { echo "second run: $out"; return 1; }
-  [[ $out != *Moved* && $(wc -l <"$d/synced") -eq 1 ]] || { echo "second run did something: $out"; return 1; }
+  [[ $out != *Moved* && $out == *"Nothing to archive."* && $(wc -l <"$d/synced") -eq 1 ]] ||
+    { echo "second run did something: $out"; return 1; }
   [[ $("$bin/daily-archive" --path "$today") == "$v/$today.md" &&
     $("$bin/daily-archive" --path 2025-01-31) == "$v/2025-01 January/Week 4/2025-01-31.md" &&
     $("$bin/daily-archive" --path 2023-03-14) == "$v/2023-03 March/Week 2/2023-03-14.md" ]] ||
@@ -522,13 +534,15 @@ evening_run() { # the journal (only when there's work to journal), then the back
     { echo "its own vault-sync agent beside the journal's"; return 1; }
   # The stubs expand $2 and $WORK when they run, not here.
   # shellcheck disable=SC2016
-  printf '#!/bin/sh\necho claude "$@" >>"%s"\n' "$log" >"$e/.local/share/mise/shims/claude"
+  printf '#!/bin/sh\necho claude "$@" >>"%s"\n[ -z "$CLAUDEFAIL" ]\n' "$log" >"$e/.local/share/mise/shims/claude"
+  # shellcheck disable=SC2016
+  printf '#!/bin/sh\n[ -z "$OFFLINE" ]\n' >"$e/.local/bin/net-wait"
   printf '#!/bin/sh\necho vault-sync >>"%s"\n' "$log" >"$e/.local/bin/vault-sync"
   # shellcheck disable=SC2016
   printf '#!/bin/sh\n[ -n "$NOACCESS" ] && exit 2\n[ -n "$WORK" ] && echo "## ~/code"\nexit 0\n' >"$e/.local/bin/journal-data"
   chmod +x "$e"/.local/bin/* "$e/.local/share/mise/shims/claude"
   mkdir -p "$e/.config/private-cradle/claude"
-  printf '%s\n' '# a comment' '' mcp__example__read_thing 'Bash(git -C * diff -- Example/)' >"$e/.config/private-cradle/claude/journal-tools"
+  printf '%s\n' '# a comment' '' mcp__example__read_thing 'Bash(git -C <vault> diff -- Example/)' >"$e/.config/private-cradle/claude/journal-tools"
   HOME=$e XDG_STATE_HOME=$e/state "$home/.local/bin/obsidian-journal" >/dev/null || return 1
   [[ $(cat "$log") == vault-sync ]] || { echo "quiet day:"; cat "$log"; return 1; }
   rm "$log"
@@ -536,11 +550,12 @@ evening_run() { # the journal (only when there's work to journal), then the back
   [[ $(head -1 "$log") == claude*"Don't run vault-sync"* && $(sed -n 2p "$log") == vault-sync ]] ||
     { echo "work day:"; cat "$log"; return 1; }
   # Read-only connector tools only: Slack under both names, Calendar, Drive and Docs,
-  # plus private-cradle's journal-tools (comments and blank lines skipped).
+  # plus private-cradle's journal-tools (comments and blank lines skipped, <vault>
+  # replaced by the work vault) and reading all of private-cradle.
   local t
   for t in mcp__claude_ai_Slack__slack_search_public_and_private mcp__plugin_slack_slack__slack_read_thread \
     mcp__claude_ai_Google_Calendar__list_events mcp__claude_ai_Google_Docs__read_doc \
-    mcp__example__read_thing "Bash(git -C * diff -- Example/)"; do
+    mcp__example__read_thing "Bash(git -C $vault diff -- Example/)" "Read(~/.config/private-cradle/**)"; do
     grep -qF -- "$t" "$log" || { echo "evening run lacks $t"; return 1; }
   done
   ! grep -qF -- '# a comment' "$log" || { echo "comment passed as a tool"; return 1; }
@@ -554,6 +569,13 @@ evening_run() { # the journal (only when there's work to journal), then the back
   [[ $(cut -d' ' -f1 "$e/state/cradle/journal/no-access") == "$(date +%F)" ]] || { echo "no marker"; return 1; }
   HOME=$e XDG_STATE_HOME=$e/state "$home/.local/bin/obsidian-journal" >/dev/null || return 1
   [[ ! -e $e/state/cradle/journal/no-access ]] || { echo "marker kept after a good run"; return 1; }
+  # No network, or Claude fails: the day goes in the failed marker; still backs up.
+  rm "$log"
+  out=$(HOME=$e XDG_STATE_HOME=$e/state WORK=1 OFFLINE=1 "$home/.local/bin/obsidian-journal") || return 1
+  [[ $out == *"No network"* && $(cat "$log") == vault-sync ]] || { echo "offline: $out"; cat "$log"; return 1; }
+  out=$(HOME=$e XDG_STATE_HOME=$e/state WORK=1 CLAUDEFAIL=1 "$home/.local/bin/obsidian-journal") || return 1
+  [[ $out == *"journal run failed"* && $(tail -1 "$log") == vault-sync ]] || { echo "claude failed: $out"; return 1; }
+  [[ $(sort -u "$e/state/cradle/journal/failed") == "$(date +%F)" ]] || { echo "no failed marker"; return 1; }
 }
 ssh_host() { # ssh_host <ssh config> <alias> <expected hostname>
   local got

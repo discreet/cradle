@@ -103,7 +103,7 @@ and every tag.
 | A Homebrew formula | Nowhere, if mise can install it. Only `bash`, `bash-completion@2` and `mise` are formulae |
 | Shell settings, aliases, env | a file in `dot_config/bash/rc.d/` (loaded in name order) |
 | A macOS setting | a `run_onchange_` script using `defaults write`, ideally applied without logging out |
-| Something that runs at login | a plist in `private_Library/LaunchAgents/` named `<label>.plist`; `run_onchange_after_30-launch-agents.sh.tmpl` finds it and reloads only agents that changed. If it reads `~/Documents`, run its script as `/opt/homebrew/bin/bash <script>` (the program with Full Disk Access) and make it say so when access is denied, not fail quietly |
+| Something that runs at login | a plist in `private_Library/LaunchAgents/` named `<label>.plist`; `run_onchange_after_30-launch-agents.sh.tmpl` finds it and reloads only agents that changed. If it reads `~/Documents`, run its script as `/opt/homebrew/bin/bash <script>` (the program with Full Disk Access) and make it say so when access is denied, not fail quietly. If it needs the network, run `net-wait` first: launchd starts a run the Mac slept through on waking, often before Wi-Fi is back |
 | A file that programs also write | a `modify_` template that merges managed keys over the live file, like `dot_config/claude/modify_settings.json` and `private_dot_docker/modify_private_config.json`. The merge can't set `false`, `""` or `0` over a live value; turn such a setting off another way (e.g. a `run_onchange_` script with `jq`) |
 | A value that differs per machine | `promptStringOnce` in `.chezmoi.toml.tmpl`, used as `{{ .name }}` in a `.tmpl` file |
 | A file from someone else's repo | `.chezmoiexternal.toml`, pinned to a commit, with a link to its history above the entry |
@@ -274,6 +274,11 @@ are listed so they aren't proposed again without a reason.
   `cradle.md` for private notes. cradle's side stays generic: name nothing
   private in this repo, commit messages or tags. Work repos keep a link to
   their agent in `.claude/agents/` (still excluded), pointing into it.
+  The evening journal run may read all of private-cradle, read only
+  (`Read(~/.config/private-cradle/**)`; the user's call, 2026-11-27), on one
+  condition: nothing it reads there ever goes into this repo, its commits or
+  tags. It stays on the machine and in the private repo; cradle holds only
+  the generic rule.
 - **Apps:** Homebrew installs only Obsidian, plus Ghostty on Ghostty
   machines. Firefox and Slack were removed on 2026-11-20 (Slack is still
   used through its claude.ai connector). The Slack app comes pre-installed
@@ -298,7 +303,9 @@ are listed so they aren't proposed again without a reason.
   needs the grant again. Without access, `is-work` exits 2 with a message,
   `obsidian-journal` logs it and leaves a `no-access` marker,
   `vault-sync` notifies, and `journal-check` tells the next session and
-  has it write the missed day. No automatic test from launchd's context
+  has it write the missed day. Likewise (2026-11-27), when the network
+  isn't up within 5 minutes (`net-wait`) or Claude fails, the run adds the
+  day to a `failed` marker and the next session writes it. No automatic test from launchd's context
   (that would need `launchctl`); `launchctl kickstart` of the agent is the
   manual check. Moving the vaults and work folders out of `~/Documents` and
   granting Apple's `/bin/bash` were not chosen.
@@ -360,10 +367,11 @@ are listed so they aren't proposed again without a reason.
   note at the top. It never overwrites, deletes or touches files not
   named like a date; a taken archive path is reported and skipped. A
   past day's note the journal must create (a catch-up) goes straight
-  into its archive folder. Declined (2026-11-24): allowing `daily-archive`
-  without a prompt in Claude's settings, and a line about it in the global
-  instructions; the 04:00 run (with Full Disk Access) does the archiving,
-  and an agenda run asks first. Shell history was left out on purpose; per-session summaries and
+  into its archive folder. `daily-archive` runs without asking, allowed
+  exactly as `Bash(daily-archive)` and `Bash(daily-archive --path *)`:
+  declined on 2026-11-24 (an agenda run asked first), chosen on 2026-11-27
+  because auto mode's classifier now refuses it outright. A line about it
+  in the global instructions stays declined. Shell history was left out on purpose; per-session summaries and
   an on-demand-only journal were declined.
 - **Google Workspace:** through claude.ai connectors only (Calendar for the
   journal; Drive, Docs and Sheets for searching and editing), connected in
